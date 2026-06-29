@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "lib": ["ESNext"],
+
+    "strict": true,
+    "isolatedDeclarations": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+
+    "outDir": "dist",
+    "rootDir": ".",
+    "paths": {
+      "loopy": ["./src/index.ts"]
+    },
+
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noEmitOnError": false,
+    "noUncheckedIndexedAccess": true
+  },
+  "include": ["src"]
+}

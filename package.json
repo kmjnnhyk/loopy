@@ -1,0 +1,14 @@
+{
+  "name": "loopy",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "description": "Type-safe internal TS DSL for LLM agents/tools/workflows — React for agents",
+  "scripts": {
+    "emit": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^6"
+  }
+}

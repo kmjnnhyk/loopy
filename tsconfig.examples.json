@@ -1,0 +1,13 @@
+{
+  // Consumer-side build: models a USER who wrote tools/agents/workflows with
+  // loopy. isolatedDeclarations is OFF here (a consumer app doesn't need it) so
+  // the .d.ts carries the INFERRED composite types — exactly what we read by
+  // hand to judge name-preservation / hover cleanliness / TS2742 at the seam.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "isolatedDeclarations": false,
+    "outDir": "dist-examples"
+  },
+  "include": ["src", "examples"],
+  "exclude": ["examples/_negative.ts"]
+}

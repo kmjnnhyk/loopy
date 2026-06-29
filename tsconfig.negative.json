@@ -1,0 +1,10 @@
+{
+  // Standalone build for the must-error fixtures. noEmit — we only want the
+  // diagnostics. Includes examples/_negative.ts (the positive build excludes it).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "isolatedDeclarations": false,
+    "noEmit": true
+  },
+  "include": ["src", "examples"]
+}
