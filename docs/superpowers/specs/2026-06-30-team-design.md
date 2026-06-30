@@ -114,7 +114,14 @@ const simple = team({ name: "s", entry: "a", state: {}, agents: { a, b } });
   - `nextAgent: lastChannel<AgentName | null>(entry)` — 제어 채널, **init = `entry`**(아래 부트스트랩), **매 턴 router가 읽은 직후 null로 소비**.
 - **author 선언**: 도메인 채널. 입력 seed는 **`inputChannel<T>()`**(신규, no-init — 런타임 제공), 그 외는 `lastChannel`/`listChannel`.
 
-> **신규 `inputChannel<T>()` (라운드2 결함):** 잠긴 `lastChannel<T>(init: T)`는 init이 **필수**(`src/index.ts:219`)라 `issue: lastChannel<Issue>()`는 TS2554. 그러나 `issue`는 순수 *입력*이라 자연스러운 init이 없다. → `inputChannel<T>(): Channel<T, T>`(no-init, 런타임 run 입력으로 seed 필수)를 도입. `InputOf<Team>`는 **inputChannel로 선언된 채널만** 골라 run 입력 타입을 만든다(`{ issue: Issue }`). 이는 작은 신규 타입 표면 — §0의 "신규 표면 3개"에 포함(§8 추적).
+> **신규 `inputChannel<T>()` (라운드2 결함 + 라운드3 타입 수정):** 잠긴 `lastChannel<T>(init: T)`는 init이 **필수**(`src/index.ts:219`)라 `issue: lastChannel<Issue>()`는 TS2554. 그러나 `issue`는 순수 *입력*이라 자연스러운 init이 없다. → `inputChannel<T>()` 도입(no-init, 런타임 run 입력으로 seed 필수). **⚠️ 단순 `(): Channel<T,T>`로는 안 된다** — 잠긴 `lastChannel<T>(init): Channel<T,T>`와 *타입이 동일*(`Channel<V,U=V>`엔 init 슬롯 없음)이라 `InputOf`가 둘을 못 가른다. **반드시 타입-레벨 브랜드**를 달아야 한다(`~deps`/`~passTo` phantom과 동일 패턴):
+> ```ts
+> interface InputChannel<T> extends Channel<T, T> { readonly "~input": true }
+> function inputChannel<T>(): InputChannel<T>;
+> type InputOf<Team> = { [K in keyof S as S[K] extends InputChannel<any> ? K : never]:
+>                          S[K] extends InputChannel<infer T> ? T : never };   // 브랜드로 선택 (V===U 비교 아님)
+> ```
+> → `InputOf<typeof prTriage> ≡ { issue: Issue }`(브랜드 `~input` 가진 `issue`만; `lastChannel`/`listChannel`은 브랜드 없어 제외). 작은 신규 타입 표면 — §0의 "신규 표면 3개"에 포함(§8 추적).
 
 **⚠️ nextAgent 소비 + entry 부트스트랩 (라운드1 blocker + 라운드2 blocker):**
 - core §1.1 "absent keys are untouched" 규칙상 nextAgent를 안 비우면 같은 에이전트가 maxTurns까지 무한 반복. **수정: 런타임이 매 턴 router 호출 직후 nextAgent를 null로 fold(consume-on-read).**
@@ -208,7 +215,7 @@ const simple = team({ name: "s", entry: "a", state: {}, agents: { a, b } });
 
 ### Gate #0 — 단언 작성 전 닫을 API 결정 (BLOCKER)
 1. **team-에이전트 shape**: `agent()` 확장 — `passTo?: readonly string[]` 추가, team-노드 시 `input` 옵셔널(team이 state 뷰 바인딩). (대안 `teamAgent()` — 정체성상 비채택.)
-2. **`inputChannel<T>()`** 신규 생성자 + `InputOf<Team>`가 inputChannel 채널만 골라 run 입력 타입 도출(§4). emit P4로 검증.
+2. **`inputChannel<T>(): InputChannel<T>`** 신규 생성자(타입-레벨 `~input` 브랜드 필수 — `Channel<T,T>`만으론 lastChannel과 동형이라 구분 불가) + `InputOf<Team>`가 브랜드로 골라 run 입력 타입 도출(§4). emit P4로 검증.
 3. **team 툴 ctx에 `interrupt<T>` 노출**: reviewer의 `requestApproval` 툴 ctx가 NodeCtx-급 interrupt 보유(§7). emit P5로 검증(툴 ctx 대상).
 4. **채널 표기**: 자동 `transcript=listChannel<Msg>()`, `nextAgent=lastChannel<AgentName|null>(entry)`.
 
@@ -216,7 +223,7 @@ const simple = team({ name: "s", entry: "a", state: {}, agents: { a, b } });
 - **P1 passTo 합성 툴 named**: `keyof PassToolNames<PassToOf<typeof triage>> ≡ "pass_to_bugFixer" | "pass_to_docsWriter"`. (seam pos① 동형, anonymous blob 금지.)
 - **P2 router 반환 유니온 (entry `"triage"` 포함)**: `TeamRouterReturn<typeof prTriage> ≡ "triage"|"bugFixer"|"docsWriter"|"reviewer"|"~end"`. (inherited `.branch`, passTo 가드와 독립.)
 - **P3 자동 채널 named**: `S["nextAgent"] ≡ AgentName|null`; `S["transcript"] ≡ readonly Msg[]`; `S["verdict"] ≡ Verdict|null`.
-- **P4 `rt.run` 입출력 (inputChannel 기반)**: `demoTriage(): Promise<Verdict | null>`(단일 `.writes` 투영, `| null` 정직); `InputOf<...["prTriage"]> ≡ { issue: Issue }`(**inputChannel로 선언된 `issue`만** 입력으로 선택 — lastChannel/listChannel은 init 있어 제외).
+- **P4 `rt.run` 입출력 (inputChannel 브랜드 기반)**: `demoTriage(): Promise<Verdict | null>`(단일 `.writes` 투영, `| null` 정직); `InputOf<...["prTriage"]> ≡ { issue: Issue }`(**`~input` 브랜드 가진 `issue`만** 선택 — `lastChannel`/`listChannel`은 브랜드 없어 제외; V===U 비교 아님 — §4 브랜드 정의).
 - **P5 team 툴 ctx `interrupt<T>` 노출 + resume 라운드트립**: `requestApproval` 툴의 run-ctx가 `interrupt: <T>(payload)=>Promise<T>` 노출(에이전트 ctx 아님); resume value 타입 `Approval` named 생존(seam④ 동형).
 - **P6 `.writes` 0/다수 → state 스냅샷**: 임의 단일 채널로 silent 안 좁힘.
 - **P7 deps 수렴 + passTo absorb**: `RequiredDeps<{prTriage}> ≡ "repo"`; passTo 추가가 유니온 안 넓힘.
@@ -281,7 +288,7 @@ test("prTriage: bug → fix → approve", async (t) => {
 
 - **`team`**(구 network) / **`passTo`**(구 handoff, 타깃 이름 문자열, `passTo:["b"]` → `pass_to_b()`).
 - **`nextAgent`** — 제어 채널, **init=`entry`**, 매 턴 router 읽은 직후 소비(null).
-- **`transcript`** — 공유 대화(`listChannel<Msg>()`). **`inputChannel<T>()`** — no-init 입력 seed 채널(`InputOf`가 선택).
+- **`transcript`** — 공유 대화(`listChannel<Msg>()`). **`inputChannel<T>(): InputChannel<T>`** — no-init 입력 seed 채널, 타입-레벨 `~input` 브랜드 보유(`InputOf`가 브랜드로 선택; `lastChannel`과 타입 동형이라 브랜드 필수).
 - **`entry`**(첫 차례, nextAgent seed) / **`END`**(리터럴 `"~end"`) / **`maxTurns`**(런타임 throw + 로그, 타입드 Err 아님).
 - **`.writes({ agent: channel })`** — output→채널 매핑. **기본 router** = `(s) => s.nextAgent ?? END`(nextAgent init=entry). **명시 router** = author 규칙(nextAgent 우선 검사).
 
