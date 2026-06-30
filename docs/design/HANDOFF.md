@@ -8,6 +8,15 @@
 > 페인의 출처는 `~/DEV/bell-agent/apps/api` (`@bell/api` v5, 순수 CommonJS, raw `@anthropic-ai/sdk`): 손코딩 에이전트 루프(히스토리 누락 버그), regex+JSON.parse + silent fail-open, stringly-typed, 가변 `ctx` bag, DB 상태문자열 라이프사이클.
 > **bell-agent는 *의도 참조용*일 뿐 — loopy는 완전히 새 설계. 절대 bell-agent 리팩토링 아님.**
 
+## 정체성 / 포지셔닝 (2026-06-30 확정 — 재논의 X)
+loopy는 **LangChain/LangGraph 래퍼가 아니다** (둘 다 import 안 함; raw provider SDK 위 런타임 자체 구현). 차용은 *기법*이지 의존이 아님.
+- **vs LangChain**: 다른 슬롯. LangChain의 죄 = 루프를 추상화 뒤로 숨김. loopy는 정반대 — 루프 구조를 *명시적·타입드*로 드러냄. 문서로더/리트리버/RAG 배관은 스코프 밖(LOCKED).
+- **vs LangGraph**: 상태머신 멘탈 모델(채널/reducer·checkpointer·interrupt·typed router)은 차용("Steal"). 결정적 차이 = LangGraph(파이썬 우선, TS 포트조차)가 못 주는 **end-to-end TS 타입 추론**(= seam 작업이 증명) + **구조 표준화**(규정 폴더·레지스트리·하나의 Step 스파인 = library 아닌 **framework**).
+- **가장 깊은 차별점 — 스펙트럼을 타입드 설계 표면으로**: workflow(결정론, 흐름 고정) ↔ agent(autonomous, 매 턴 모델 결정) ↔ **team(하이브리드 = lead/sub-agent 루프)** 을 하나의 타입드 모델로 1급화하고, 둘 사이 선택을 **로컬 API 선택으로 박제**: `.router()`(고정) vs `passTo`(모델 판단). Anthropic "Building Effective Agents"의 workflow-vs-agent 판단 = loopy에선 *컴파일 체크되는 분기 결정*.
+- **"에이전트를 위한 React" 정밀 매핑**: tool/agent/workflow/team = 컴포넌트, `state = fold(reducer, log)` ↔ `UI = f(state)`(동일 패러다임 → 타임트래블 공짜), 이벤트로그 타임트래블 dev 웹 = React/Redux DevTools, 규정 폴더·레지스트리 = 프레임워크 컨벤션.
+- **붕괴("그냥 타입드 LangGraph") 방지 2규율**: ① 타입 추론이 *스케일*에서 버틸 것(#1 리스크, 계속), ② 루프를 *가독적*으로 유지 — LangChain처럼 숨기지 말 것(이벤트로그·effects-as-data·보이는 think→act→observe 그래프·OSS·dev 웹 관제가 "읽으며 배우는 하네스"를 만듦).
+- **정직한 채택 리스크**: 통합(LangChain)·프로덕션 마일리지(LangGraph)로는 안 이김. **타입세이프 + 구조적 명료성 + 숨기지 않는 루프**를 *충분히* 중시하는 TS-우선 청중에서만 통함. bell-agent에 멀티에이전트 수요가 아직 없던 것과 같은 종류의 정직 — 아무도 안 원하는 폭을 짓지 말 것.
+
 ## 읽어야 할 산출물
 - `docs/design/research-design-space.md` — 리서치 종합(차용 카탈로그, 3개 후보 아키텍처 A/B/C, 추천). LangChain/LangGraph·Spring·Flux/Redux/XState·TS DSL 기법 차용 분석.
 - `docs/design/core-state-and-types.md` — **③ State·이벤트로그·영속성 + ④ 타입 기계장치의 spec-ready 설계**. 실제 TS 컴파일(TS 6.0, --strict)로 적대 검증 완료. ★ 가장 중요.
@@ -21,7 +30,7 @@
   - `tool({ name, description, input, output, deps, run })` — LLM이 부르는 함수. input/output은 Standard Schema. **tool엔 model 없음.** deps는 *선언*(registry 키), run 본문에서 역추론 불가.
   - `agent({ name, model, instructions, tools, output, deps })` — 미리 조립된 think→act→observe 루프(히스토리·tool_result·리트라이·파싱 소유). **model은 agent 전용 속성.** agent도 Step → 합성 가능. "model 쓰는 tool"=sub-agent를 tool 자리에 넘김.
   - `workflow({ name, state })` — 명시적 그래프. 노드=값/타입드키, 라우터=State→nextKey(컴파일 체크), 사이클 허용.
-  - `network({ name, state, agents, router })` — 멀티에이전트(v1 범위). router-over-shared-state 1급, handoff는 sugar.
+  - `team({ name, state, agents })` *(2026-06-30 개명: network→team — AutoGen "Team"/CrewAI "Crew" 선례, "에이전트 팀" 멘탈모델)* — 멀티에이전트(v1 범위). router-over-shared-state 1급, **`passTo` sugar** *(2026-06-30 개명: handoff→passTo — 완전 제어 이양 의미에 맞는 일상어)*. v1 상세 설계 = 진행 중(별도 spec).
   - `defineLoopy({ models, deps, mcp, store, agents, workflows })` — 런타임+중앙 레지스트리(함수형 DI, **데코레이터/reflect-metadata 금지**). **진입점만 나열**(tool은 agent가 값-import). `run("name", input)` 타입드.
 - **컨벤션 층 전부 잠김**: 규정 폴더 `src/tools|agents|workflows|networks|deps/` + `loopy.config.ts`. 파일명 `{name}.ts`(`.tool.ts` 접미사는 colocation 시 옵션). 폴더 grouping 허용(네임스페이스 옵션). **tool은 값-import**(`tools:[editFile]`, 이름 문자열 X). 레지스트리 = **(A) 명시적 `defineLoopy` 기본 + (B) 폴더발견 코드젠 `loopy dev --codegen` 옵션**.
 - **영속성+HITL v1 1급**: 이벤트소싱(append-only 로그, `state = fold(reducer, log)`) → replay(LLM 재호출 0)·resume·audit. `store`(checkpointer), `ctx.interrupt(payload)`, `runtime.resume(threadId, value)`.
@@ -69,11 +78,12 @@
 
 **완료 — brainstorming→spec (`docs/superpowers/specs/`):**
 - **DevTools (`loopy dev`) v1** — `2026-06-30-devtools-design.md`. 로컬 dev 디버깅 웹 UI(Bun+브라우저, WS). A안 `loopy dev`=앱 실행기(in-proc devSink → store 영속 + WS). v1 뷰=타임라인+상세·그래프(읽기전용). 핵심: 브라우저도 `state=fold(reduce,log)` 동형 → 라이브·과거·스크럽 단일 코드경로(타임트래블 공짜). replay·interrupt resume·채널 diff·프로덕션 관측=v2.
+  - **NORTH-STAR (2026-06-30 추가)**: dev 웹을 *키는 것 자체가* 대시보드 — loopy 코드를 물리기만 하면 관측 + 토폴로지 + (HITL 승인 등) 운영이 **zero-config**로 나와 hermes식 사내 대시보드·n8n/Dify식 워크플로우 도구가 불필요해지는 것을 목표. 해자 = 모든 게 이벤트소싱(계측 0) + end-to-end 타입드(설정 0)라 *대시보드를 짓는 게 아니라 코드를 비춤*. **경계**: 거울 + 관제(observe/operate)만 — 시각적 *저작*(드래그-드롭 빌더)은 잠긴 코드-우선과 충돌하므로 스코프 밖. DevTools spec을 이 north-star로 진화시키는 별도 브레인스토밍 예정.
 - **테스팅 v1** — `2026-06-30-testing-design.md`. 녹화→재생 회귀(골든 로그). effect(model·tool) memo + 사용자 코드만 재실행 → divergence 첫 지점(content-addressed)+output. 재생 엔진=③ resume 재사용. eval·프로파일·부분재생=v2.
-- 둘 다 다음 단계 = 각자 `writing-plans`→구현 (별도 세션).
+- **team (멀티에이전트) v1** — `2026-06-30-team-design.md` *(v2, 검증-하드닝)*. 구 network. agent를 노드로 한 workflow의 **얇은 의견적 프리셋** + 공유 `transcript` + `passTo` 설탕. 앵커 = PR/이슈 트리아지(triage→bugFixer/docsWriter→reviewer→END/반려루프). 제어 = **C안 하이브리드**(명시 router 1급 + passTo가 LLM-호출 `pass_to_*` 툴·기본 router 합성). **#1 타입 위험 CLOSED**: 7-에이전트 적대 검증 워크플로우(`wf_14fddbe1-59f`)가 실제 `tsc 6.0.3`로 passTo 멤버십 가드를 닫음 — **후보 (ii) 이름-캡처 + per-slot 브랜드 채택**(값-import은 순환에서 TS7022 치명). 동시에 잡은 결함: nextAgent 미소비 무한루프·반려루프 미재진입·채널 표기·maxTurns 타입드Err 오claim 등 17 majors+1 blocker 통합. **잔여(구현 전 emit 게이트)**: P1–P7/N1–N5 메인 직접 판독 + 10-에이전트 full-size .d.ts hover-clean 확인 + agent() 시그니처 확장(passTo?/input?·ctx interrupt).
+- 셋 다 다음 단계 = 각자 `writing-plans`→구현 (별도 세션).
 
 **미착수 (다음 브레인스토밍 후보):**
-- network/router 상세 (멀티에이전트 v1, router-over-shared-state + handoff sugar)
 - 크로스커팅 (미들웨어/관측/가드레일 — 모든 Step 감싸는 횡단 관심사)
 - 패키징/모노레포 구조 (코어/어댑터/DevTools 패키지 분리, 공개 API 경계, OSS 레이아웃)
 
