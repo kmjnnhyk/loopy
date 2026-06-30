@@ -65,8 +65,17 @@
 
 **결론:** ④ 타입 기계장치의 마지막 미검증 리스크 닫힘. 공개 표면(`tool`/`agent`/`workflow`/`defineLoopy`)은 *사용자 코드 변경 없이* 실제 `.d.ts` emit 에서 nameable·hover-clean·정확한 오류진단(TS2820/TS2741). 다음 = §"아직 안 다룬 설계 섹션" 진행 가능 (크로스커팅 · network/router · DevTools · 패키징 · 테스팅).
 
-## 아직 안 다룬 설계 섹션 (프로토타입 후)
-크로스커팅(미들웨어/관측/가드레일) · network/router 상세 · **DevTools 브레인스토밍**(이벤트소싱이라 Redux-DevTools급 타임트래블 공짜; 로컬 `loopy dev` UI=그래프 시각화+스텝 타임라인+채널 diff+replay+렌더된 프롬프트+대기 interrupt; LangSmith의 로컬-OSS 대응) · 패키징/모노레포 구조 · 테스팅(결정적 replay 테스트, stub LLM, 프로파일).
+## 설계 섹션 진행 상황
+
+**완료 — brainstorming→spec (`docs/superpowers/specs/`):**
+- **DevTools (`loopy dev`) v1** — `2026-06-30-devtools-design.md`. 로컬 dev 디버깅 웹 UI(Bun+브라우저, WS). A안 `loopy dev`=앱 실행기(in-proc devSink → store 영속 + WS). v1 뷰=타임라인+상세·그래프(읽기전용). 핵심: 브라우저도 `state=fold(reduce,log)` 동형 → 라이브·과거·스크럽 단일 코드경로(타임트래블 공짜). replay·interrupt resume·채널 diff·프로덕션 관측=v2.
+- **테스팅 v1** — `2026-06-30-testing-design.md`. 녹화→재생 회귀(골든 로그). effect(model·tool) memo + 사용자 코드만 재실행 → divergence 첫 지점(content-addressed)+output. 재생 엔진=③ resume 재사용. eval·프로파일·부분재생=v2.
+- 둘 다 다음 단계 = 각자 `writing-plans`→구현 (별도 세션).
+
+**미착수 (다음 브레인스토밍 후보):**
+- network/router 상세 (멀티에이전트 v1, router-over-shared-state + handoff sugar)
+- 크로스커팅 (미들웨어/관측/가드레일 — 모든 Step 감싸는 횡단 관심사)
+- 패키징/모노레포 구조 (코어/어댑터/DevTools 패키지 분리, 공개 API 경계, OSS 레이아웃)
 
 ## 모델 가이드 (단계별 — 다음 세션은 단계에 맞춰 모델 선택)
 - **남은 설계/브레인스토밍 + 위 비준 2건 → Opus.** 아키텍처 결정·트레이드오프 판단. 여기서 모델 아끼면 설계가 얕아짐. 순수 Sonnet 단독 세션은 비추.
