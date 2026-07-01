@@ -1,7 +1,7 @@
 // team seam assertions (P1–P7). Compile-checks the .d.ts boundary; the emitted
 // forms are hand-read by the main session for hover cleanliness (spec §10).
-import type { PassToOf, PassToolNames, TeamInputOf, StateOf, TeamFullState, Msg, GuardAgents, TeamRouterReturn, WritesResult } from "loopy";
-import { triage, reviewer, triageState, bugFixer, docsWriter, prTriage, requestApproval } from "./team";
+import type { PassToOf, PassToolNames, TeamInputOf, StateOf, TeamFullState, Msg, GuardAgents, TeamRouterReturn, WritesResult, InputOf, RequiredDeps } from "loopy";
+import { triage, reviewer, triageState, bugFixer, docsWriter, prTriage, requestApproval, teamRt } from "./team";
 import type { Issue, ReviewResult } from "./team";
 
 type Expect<T extends true> = T;
@@ -70,3 +70,12 @@ export type _P5 = Expect<Equal<
   ReviewToolCtx extends { interrupt: infer F } ? F : never,
   <T>(payload: unknown) => Promise<T>
 >>;
+
+// P4 (output half): rt.run narrows to the single .writes-mapped channel value.
+export async function demoTriage(): Promise<ReviewResult | null> {
+  return teamRt.run("prTriage", { issue: { id: 7, body: "x" } });
+}
+// P4 (input): rt.run input = the inputChannel-selected shape.
+export type _P4input = Expect<Equal<InputOf<typeof prTriage>, { readonly issue: Issue }>>;
+// P7: team deps converge (bugFixer's "repo"); passTo synthesis contributes none.
+export type _P7 = Expect<Equal<RequiredDeps<{ prTriage: typeof prTriage }>, "repo">>;

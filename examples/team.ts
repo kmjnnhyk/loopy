@@ -1,7 +1,7 @@
 // team (multi-agent v1) fixture — the PR-triage team. Built up progressively
 // across the plan's tasks; this file is the anchor scenario the type surface is
 // validated against (spec §1).
-import { agent, tool, io, inputChannel, lastChannel, team, END } from "loopy";
+import { agent, tool, io, inputChannel, lastChannel, team, END, defineLoopy } from "loopy";
 import type { GitRepo } from "./deps";
 
 export interface Issue { readonly id: number; readonly body: string }
@@ -58,4 +58,12 @@ export const prTriage = team({
     return END;
   });
 
-void (null as unknown as GitRepo); // keep deps import referenced until later tasks
+// team runtime registration: bugFixer declares deps:["repo"] → the team requires
+// exactly "repo" (passTo synthesis contributes no deps). See P7.
+const repo: GitRepo = { read: async () => "", write: async () => {}, find: async () => [] };
+export const teamRt = defineLoopy({
+  agents: {},
+  workflows: {},
+  teams: { prTriage },
+  deps: { repo },
+});

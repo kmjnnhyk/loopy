@@ -393,13 +393,20 @@ export interface Runtime<Reg> {
 
 /** deps fully supplied here → directly runnable. (negative②: a missing dep
  *  errors as TS2741 "Property 'x' is missing … in Pick<LoopyDeps, …>".) */
-export function defineLoopy<const A extends Record<string, AnyEntry>, const W extends Record<string, AnyEntry>>(def: {
+export function defineLoopy<
+  const A extends Record<string, AnyEntry>,
+  const W extends Record<string, AnyEntry>,
+  const T extends Record<string, AnyEntry> = {},
+>(def: {
   agents: A;
+  // A↔W collision stays guarded HERE (not on the optional teams param) so it is
+  // enforced even when teams is omitted; teams collides against agents+workflows.
   workflows: W & NoKeyCollision<A, W>;
-  deps: Pick<LoopyDeps, RequiredDeps<A & W>>;
-}): Runtime<A & W> {
+  teams?: T & NoKeyCollision<A & W, T>;
+  deps: Pick<LoopyDeps, RequiredDeps<A & W & T>>;
+}): Runtime<A & W & T> {
   void def;
-  return { run: (async () => undefined as never) as RunFn<A & W> };
+  return { run: (async () => undefined as never) as RunFn<A & W & T> };
 }
 
 /* ============================================================================
@@ -477,6 +484,15 @@ export type GuardAgents<Agents> = {
  *  surface (a stray key errors TS2820). Independent of the passTo guard (§6). */
 export type TeamRouterReturn<Agents> = AgentNames<Agents> | END;
 
+/** union of every dep required across the team's agents — mirrors §5 NodeDepKeys.
+ *  passTo synthesis contributes no deps, so this is exactly the agents' deps. Kept
+ *  tight (NOT the broad keyof LoopyDeps) so RequiredDeps over a team registry
+ *  converges to the real dep set (P7), not "every dep". */
+export type TeamDeps<Agents> = NonNullable<
+  { [K in keyof Agents]: Agents[K] extends { readonly "~deps"?: infer D } ? D : never }[keyof Agents]
+> &
+  keyof LoopyDeps;
+
 export interface Team<Name extends string, Agents, State, Result> {
   readonly "~kind": "team";
   readonly name: Name;
@@ -488,7 +504,7 @@ export interface Team<Name extends string, Agents, State, Result> {
   // inputChannel channels; run output = the single .writes-mapped channel value.
   readonly input: IO<TeamInputOf<State>>;
   readonly output: IO<Result>;
-  readonly "~deps"?: keyof LoopyDeps;
+  readonly "~deps"?: TeamDeps<Agents>;
 }
 
 /** .writes maps an agent name → a state channel key (its output is written there).
