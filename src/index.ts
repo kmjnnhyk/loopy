@@ -451,3 +451,20 @@ export type TeamAutoState<Names extends string> = {
   readonly nextAgent: Channel<Names | null, Names | null>;
 };
 export type TeamFullState<State, Names extends string> = State & TeamAutoState<Names>;
+
+/** per-slot membership guard: an agent whose passTo targets are all members of
+ *  the team's agent set passes through UNCHANGED; a stray target brands ONLY
+ *  that slot with a `never`-missing error field naming the stray. (Spec §6 ii /
+ *  Appendix B — compiled under tsc 6.0.3; reviewer with no passTo → PassToOf =
+ *  never → [never] extends [never] → passes.) The two §2.x disciplines are
+ *  load-bearing: PassToOf uses NonNullable (NOT a constrained infer), and the
+ *  gate is the tuple-wrap [Exclude<…>] extends [never] (NOT a naked X extends never). */
+export type GuardAgents<Agents> = {
+  [K in keyof Agents]:
+    [Exclude<PassToOf<Agents[K]>, Extract<keyof Agents, string>>] extends [never]
+      ? Agents[K]
+      : {
+          readonly "~passToTargetNotInTeam":
+            Exclude<PassToOf<Agents[K]>, Extract<keyof Agents, string>>;
+        };
+};

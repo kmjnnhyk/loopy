@@ -1,7 +1,7 @@
 // team seam assertions (P1–P7). Compile-checks the .d.ts boundary; the emitted
 // forms are hand-read by the main session for hover cleanliness (spec §10).
-import type { PassToOf, PassToolNames, TeamInputOf, StateOf, TeamFullState, Msg } from "loopy";
-import { triage, reviewer, triageState } from "./team";
+import type { PassToOf, PassToolNames, TeamInputOf, StateOf, TeamFullState, Msg, GuardAgents } from "loopy";
+import { triage, reviewer, triageState, bugFixer, docsWriter } from "./team";
 import type { Issue, ReviewResult } from "./team";
 
 type Expect<T extends true> = T;
@@ -28,3 +28,15 @@ export type _P3a = Expect<Equal<S["nextAgent"], Names | null>>;
 export type _P3b = Expect<Equal<S["transcript"], readonly Msg[]>>;
 export type _P3c = Expect<Equal<S["review"], ReviewResult | null>>;   // author channel named
 export type _P3d = Expect<Equal<S["issue"], Issue>>;                  // inputChannel value survives
+
+// T5: a valid agents map (all passTo targets are members) passes the guard
+// UNCHANGED — no "~passToTargetNotInTeam" slot appears (reviewer's empty passTo
+// is absorbed to never → [never] extends [never] → passes).
+type ValidAgents = {
+  triage: typeof triage; bugFixer: typeof bugFixer;
+  docsWriter: typeof docsWriter; reviewer: typeof reviewer;
+};
+export type _T5 = Expect<Equal<
+  { [K in keyof GuardAgents<ValidAgents>]: 1 },
+  { [K in keyof ValidAgents]: 1 }
+>>;
