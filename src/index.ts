@@ -507,11 +507,38 @@ export interface Team<Name extends string, Agents, State, Result> {
   readonly "~deps"?: TeamDeps<Agents>;
 }
 
+/** a channel's stored value type. */
+export type ChannelValueOf<C> = C extends Channel<infer V, any> ? V : never;
+
+/** per-mapping output⊑channel check: for each `{ agent: channel }` entry, the
+ *  agent's output must be assignable to the channel's value type, else that slot
+ *  is branded with a `never`-missing error naming the mismatch (spec §4/§6 — the
+ *  `.writes` boundary is where "output ⊑ channel" is compile-checked). The
+ *  tuple-wrap [Out] extends [ChVal] avoids union distribution. */
+export type WritesOutputCheck<Agents, State, M> = {
+  [A in keyof M]: A extends keyof Agents
+    ? M[A] extends infer Ch
+      ? Ch extends keyof State
+        ? [OutputOf<Agents[A]>] extends [ChannelValueOf<State[Ch]>]
+          ? M[A]
+          : {
+              readonly "~agentOutputNotAssignableToChannel": {
+                readonly agent: A;
+                readonly channel: Ch;
+                readonly output: OutputOf<Agents[A]>;
+                readonly channelValue: ChannelValueOf<State[Ch]>;
+              };
+            }
+        : M[A]
+      : M[A]
+    : M[A];
+};
+
 /** .writes maps an agent name → a state channel key (its output is written there).
  *  Result = the value type of the single mapped channel (Task 8 uses it for run). */
 export interface TeamBuilder<Name extends string, Agents, State> {
   writes<const M extends Partial<Record<AgentNames<Agents>, keyof State>>>(
-    map: M,
+    map: M & WritesOutputCheck<Agents, State, M>,
   ): TeamRouted<Name, Agents, State, M>;
   router(
     fn: (s: StateOf<TeamFullState<State, AgentNames<Agents>>>) => TeamRouterReturn<Agents>,
