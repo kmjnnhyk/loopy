@@ -468,3 +468,78 @@ export type GuardAgents<Agents> = {
             Exclude<PassToOf<Agents[K]>, Extract<keyof Agents, string>>;
         };
 };
+
+/** router return = every agent key + END → inherited from workflow's .branch
+ *  surface (a stray key errors TS2820). Independent of the passTo guard (§6). */
+export type TeamRouterReturn<Agents> = AgentNames<Agents> | END;
+
+export interface Team<Name extends string, Agents, State, Result> {
+  readonly "~kind": "team";
+  readonly name: Name;
+  readonly entry: AgentNames<Agents>;
+  readonly agents: Agents;
+  readonly state: TeamFullState<State, AgentNames<Agents>>;
+  readonly maxTurns?: number;
+  // AnyEntry-compatible surface for defineLoopy (Task 8): run input from
+  // inputChannel channels; run output = the single .writes-mapped channel value.
+  readonly input: IO<TeamInputOf<State>>;
+  readonly output: IO<Result>;
+  readonly "~deps"?: keyof LoopyDeps;
+}
+
+/** .writes maps an agent name → a state channel key (its output is written there).
+ *  Result = the value type of the single mapped channel (Task 8 uses it for run). */
+export interface TeamBuilder<Name extends string, Agents, State> {
+  writes<const M extends Partial<Record<AgentNames<Agents>, keyof State>>>(
+    map: M,
+  ): TeamRouted<Name, Agents, State, M>;
+  router(
+    fn: (s: StateOf<TeamFullState<State, AgentNames<Agents>>>) => TeamRouterReturn<Agents>,
+  ): Team<Name, Agents, State, unknown>;
+}
+
+export interface TeamRouted<Name extends string, Agents, State, M> {
+  router(
+    fn: (s: StateOf<TeamFullState<State, AgentNames<Agents>>>) => TeamRouterReturn<Agents>,
+  ): Team<Name, Agents, State, WritesResult<State, M>>;
+}
+
+/** true iff U is a union of 2+ members (single member or never → false). */
+type IsUnion<U, C = U> = [U] extends [never]
+  ? false
+  : U extends unknown
+    ? [C] extends [U] ? false : true
+    : never;
+
+/** exactly one mapping → that channel's value type; 0 or >1 → full state snapshot
+ *  (no silent single-channel pick — spec §4). The single-vs-multiple split is a
+ *  union-cardinality test on keyof M (the plan's `{[K]:0}[keyof M] extends 0`
+ *  sketch is always true regardless of key count → replaced with IsUnion). */
+export type WritesResult<State, M> =
+  [keyof M] extends [never]
+    ? StateOf<State>
+    : IsUnion<keyof M> extends true
+      ? StateOf<State>
+      : M[keyof M] extends infer Ch
+        ? Ch extends keyof State
+          ? State[Ch] extends Channel<infer V, any> ? V : never
+          : never
+        : never;
+
+export function team<
+  const Name extends string,
+  const Agents extends Record<string, AnyAgent>,
+  State extends Record<string, Channel<any, any>>,
+>(def: {
+  name: Name;
+  entry: AgentNames<Agents>;
+  state: State;
+  agents: Agents & GuardAgents<Agents>;
+  maxTurns?: number;
+}): TeamBuilder<Name, Agents, State> {
+  void def;
+  return {
+    writes: (() => ({ router: () => undefined as never })) as never,
+    router: (() => undefined as never) as never,
+  } as TeamBuilder<Name, Agents, State>;
+}

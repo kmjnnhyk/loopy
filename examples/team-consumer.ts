@@ -1,7 +1,7 @@
 // team seam assertions (P1–P7). Compile-checks the .d.ts boundary; the emitted
 // forms are hand-read by the main session for hover cleanliness (spec §10).
-import type { PassToOf, PassToolNames, TeamInputOf, StateOf, TeamFullState, Msg, GuardAgents } from "loopy";
-import { triage, reviewer, triageState, bugFixer, docsWriter } from "./team";
+import type { PassToOf, PassToolNames, TeamInputOf, StateOf, TeamFullState, Msg, GuardAgents, TeamRouterReturn, WritesResult } from "loopy";
+import { triage, reviewer, triageState, bugFixer, docsWriter, prTriage } from "./team";
 import type { Issue, ReviewResult } from "./team";
 
 type Expect<T extends true> = T;
@@ -39,4 +39,26 @@ type ValidAgents = {
 export type _T5 = Expect<Equal<
   { [K in keyof GuardAgents<ValidAgents>]: 1 },
   { [K in keyof ValidAgents]: 1 }
+>>;
+
+// P2: router return union INCLUDES entry "triage" (inherited .branch surface).
+export type _P2 = Expect<Equal<
+  TeamRouterReturn<{ triage: 1; bugFixer: 1; docsWriter: 1; reviewer: 1 }>,
+  "triage" | "bugFixer" | "docsWriter" | "reviewer" | "~end"
+>>;
+void prTriage;  // fixture must compile (.writes + .router chain type-checks)
+
+// P6: WritesResult cardinality split — exactly 1 mapping → that channel's value;
+// 0 or 2+ → full StateOf snapshot (no silent single-channel pick, spec §4/§10.1).
+export type _P6single = Expect<Equal<
+  WritesResult<typeof triageState, { reviewer: "review" }>,
+  ReviewResult | null
+>>;
+export type _P6multi = Expect<Equal<
+  WritesResult<typeof triageState, { reviewer: "review"; triage: "issue" }>,
+  StateOf<typeof triageState>
+>>;
+export type _P6zero = Expect<Equal<
+  WritesResult<typeof triageState, {}>,
+  StateOf<typeof triageState>
 >>;

@@ -1,7 +1,7 @@
 // team (multi-agent v1) fixture — the PR-triage team. Built up progressively
 // across the plan's tasks; this file is the anchor scenario the type surface is
 // validated against (spec §1).
-import { agent, tool, io, inputChannel, lastChannel } from "loopy";
+import { agent, tool, io, inputChannel, lastChannel, team, END } from "loopy";
 import type { GitRepo } from "./deps";
 
 export interface Issue { readonly id: number; readonly body: string }
@@ -34,5 +34,20 @@ export const triageState = {
   issue:  inputChannel<Issue>(),
   review: lastChannel<ReviewResult | null>(null),
 };
+
+export const prTriage = team({
+  name: "prTriage",
+  entry: "triage",
+  state: triageState,
+  agents: { triage, bugFixer, docsWriter, reviewer },
+  maxTurns: 20,
+})
+  .writes({ reviewer: "review" })
+  .router((s) => {
+    if (s.nextAgent) return s.nextAgent;
+    if (s.review?.approved) return END;
+    if (s.review) return s.review.assignee;
+    return END;
+  });
 
 void (null as unknown as GitRepo); // keep deps import referenced until later tasks
