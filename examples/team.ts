@@ -67,3 +67,24 @@ export const teamRt = defineLoopy({
   teams: { prTriage },
   deps: { repo },
 });
+
+/* ── §2.9 scale check (throwaway): a 10-agent chain (s0→s1→…→s9; s9 terminates)
+ *    to confirm PassToolNames ∘ PassToOf and the Team<…> emit stay NAMED and
+ *    non-truncated at 10-agent scale — the spec §10.3 residual. The membership
+ *    guard is per-slot, so this also exercises the guard over 10 slots. ── */
+const io1 = () => io<{ n: number }>();
+const s0 = agent({ name: "s0", model: "haiku", instructions: "x", input: io1(), output: io1(), passTo: ["s1"] });
+const s1 = agent({ name: "s1", model: "haiku", instructions: "x", input: io1(), output: io1(), passTo: ["s2"] });
+const s2 = agent({ name: "s2", model: "haiku", instructions: "x", input: io1(), output: io1(), passTo: ["s3"] });
+const s3 = agent({ name: "s3", model: "haiku", instructions: "x", input: io1(), output: io1(), passTo: ["s4"] });
+const s4 = agent({ name: "s4", model: "haiku", instructions: "x", input: io1(), output: io1(), passTo: ["s5"] });
+const s5 = agent({ name: "s5", model: "haiku", instructions: "x", input: io1(), output: io1(), passTo: ["s6"] });
+const s6 = agent({ name: "s6", model: "haiku", instructions: "x", input: io1(), output: io1(), passTo: ["s7"] });
+const s7 = agent({ name: "s7", model: "haiku", instructions: "x", input: io1(), output: io1(), passTo: ["s8"] });
+const s8 = agent({ name: "s8", model: "haiku", instructions: "x", input: io1(), output: io1(), passTo: ["s9"] });
+const s9 = agent({ name: "s9", model: "haiku", instructions: "x", input: io1(), output: io1() });
+export const scaleTeam = team({
+  name: "scaleTeam", entry: "s0",
+  state: { seed: inputChannel<number>() },
+  agents: { s0, s1, s2, s3, s4, s5, s6, s7, s8, s9 },
+}).router((s) => s.nextAgent ?? END);
