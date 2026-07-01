@@ -168,12 +168,15 @@ export interface Agent<
   Out extends IO<any, any>,
   Deps extends keyof LoopyDeps,
   Tools extends readonly AnyStep[] = readonly AnyStep[],
+  Pass extends string = never,
 > extends Step<Name, In, Out, Deps> {
   readonly "~kind": "agent";
   readonly model: string;
   /** the concrete tool tuple is PRESERVED (not widened to AnyStep[]) so a
    *  consumer's `ToolDepKeys<typeof agent.tools>` stays precise across .d.ts. */
   readonly tools: Tools;
+  /** phantom: union of declared passTo target NAMES (§6 candidate ii). */
+  readonly "~passTo"?: Pass;
   readonly run: (input: InferOut<In>, ctx: AgentCtx<Deps>) => Promise<InferOut<Out>>;
 }
 
@@ -183,6 +186,7 @@ export function agent<
   Out extends IO<any, any>,
   const Tools extends readonly AnyStep[] = [],
   const D extends readonly (keyof LoopyDeps)[] = [],
+  const Pass extends readonly string[] = [],
 >(def: {
   name: Name;
   model: string;
@@ -191,7 +195,8 @@ export function agent<
   output: Out;
   tools?: Tools & NoDuplicateTools<Tools>;
   deps?: D;
-}): Agent<Name, In, Out, D[number] | ToolDepKeys<Tools>, Tools> {
+  passTo?: Pass;
+}): Agent<Name, In, Out, D[number] | ToolDepKeys<Tools>, Tools, Pass[number]> {
   return {
     "~kind": "agent",
     name: def.name,
@@ -200,8 +205,14 @@ export function agent<
     output: def.output,
     tools: (def.tools ?? []) as Tools,
     run: undefined as never,
-  } as Agent<Name, In, Out, D[number] | ToolDepKeys<Tools>, Tools>;
+  } as Agent<Name, In, Out, D[number] | ToolDepKeys<Tools>, Tools, Pass[number]>;
 }
+
+/** ~passTo extractor — NonNullable (NOT a constrained infer; see Global Constraints). */
+export type PassToOf<A> = A extends { readonly "~passTo"?: infer P } ? NonNullable<P> : never;
+
+/** variadic upper bound for team agent records. */
+export type AnyAgent = Agent<string, IO<any, any>, IO<any, any>, keyof LoopyDeps, readonly AnyStep[], string>;
 
 /* ============================================================================
  * §5 — channels + workflow (two-phase .nodes().flow(); no forward-ref leak)
