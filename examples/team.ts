@@ -25,9 +25,17 @@ export const docsWriter = agent({
   input: io<{ issue: Issue }>(), output: io<{ done: boolean }>(),
   passTo: ["reviewer"],
 });
+export const requestApproval = tool({
+  name: "requestApproval",
+  description: "Pause for human approval.",
+  input: io<{ summary: string }>(),
+  output: io<{ approved: boolean }>(),
+  run: async (i, ctx) => ctx.interrupt<{ approved: boolean }>({ ask: i.summary }),
+});
 export const reviewer = agent({
   name: "reviewer", model: "opus", instructions: "Review; approve or reassign.",
   input: io<{ issue: Issue }>(), output: io<ReviewResult>(),
+  tools: [requestApproval],
   // no passTo — termination via router
 });
 export const triageState = {

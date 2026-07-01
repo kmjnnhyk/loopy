@@ -1,7 +1,7 @@
 // team seam assertions (P1–P7). Compile-checks the .d.ts boundary; the emitted
 // forms are hand-read by the main session for hover cleanliness (spec §10).
 import type { PassToOf, PassToolNames, TeamInputOf, StateOf, TeamFullState, Msg, GuardAgents, TeamRouterReturn, WritesResult } from "loopy";
-import { triage, reviewer, triageState, bugFixer, docsWriter, prTriage } from "./team";
+import { triage, reviewer, triageState, bugFixer, docsWriter, prTriage, requestApproval } from "./team";
 import type { Issue, ReviewResult } from "./team";
 
 type Expect<T extends true> = T;
@@ -61,4 +61,12 @@ export type _P6multi = Expect<Equal<
 export type _P6zero = Expect<Equal<
   WritesResult<typeof triageState, {}>,
   StateOf<typeof triageState>
+>>;
+
+// P5: the tool's run-ctx exposes interrupt<T> (HITL flows through the tool, not
+// the declarative agent). Verify the ctx param shape carries interrupt.
+type ReviewToolCtx = Parameters<(typeof requestApproval)["run"]>[1];
+export type _P5 = Expect<Equal<
+  ReviewToolCtx extends { interrupt: infer F } ? F : never,
+  <T>(payload: unknown) => Promise<T>
 >>;

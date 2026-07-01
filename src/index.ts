@@ -18,6 +18,10 @@ export interface LoopyDeps {}
 /** A tool's run-context: only the *declared* slice of deps, nothing else. */
 export interface ToolCtx<D extends keyof LoopyDeps> {
   readonly deps: Pick<LoopyDeps, D>;
+  /** HITL: suspend the run; resolves with the typed resume value. Exposed on the
+   *  tool ctx so a declarative (bodyless) agent can request approval via a tool
+   *  (spec §7 / §12c — a controlled extension of the locked ToolCtx). */
+  interrupt<T>(payload: unknown): Promise<T>;
 }
 
 /** An agent's run-context (loop-owner; same dep slice). */
