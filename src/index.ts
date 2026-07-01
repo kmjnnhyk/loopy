@@ -214,6 +214,11 @@ export type PassToOf<A> = A extends { readonly "~passTo"?: infer P } ? NonNullab
 /** variadic upper bound for team agent records. */
 export type AnyAgent = Agent<string, IO<any, any>, IO<any, any>, keyof LoopyDeps, readonly AnyStep[], string>;
 
+/** P1: template-literal mapped type — the synthesized handoff tool manifest. */
+export type PassToolNames<Pass extends string> = {
+  readonly [N in Pass as `pass_to_${N}`]: { readonly target: N };
+};
+
 /* ============================================================================
  * §5 — channels + workflow (two-phase .nodes().flow(); no forward-ref leak)
  * ========================================================================== */
