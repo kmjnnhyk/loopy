@@ -426,3 +426,28 @@ export function loopy<const A extends Record<string, AnyEntry>, const W extends 
     RequiredDeps<A & W>
   >;
 }
+
+/* ============================================================================
+ * §8 — team (multi-agent v1). A thin opinionated preset over workflow: agents
+ *      as nodes + a shared transcript + a nextAgent control channel + passTo
+ *      name-capture sugar. Reuses workflow's router/State machinery (spec §2).
+ *      Three small NEW type surfaces: passTo↔membership guard, inputChannel,
+ *      tool-ctx interrupt. Runtime (control loop / consume-on-read / replay) is
+ *      Plan B — every body here stays stubbed like the rest of the skeleton.
+ * ========================================================================== */
+
+/** shared conversation message (minimal). transcript = listChannel<Msg>(). */
+export interface Msg {
+  readonly role: "user" | "assistant" | "tool";
+  readonly agent?: string;
+  readonly content: string;
+}
+export type AgentNames<Agents> = Extract<keyof Agents, string>;
+
+/** team auto-injected channels: shared transcript (append) + nextAgent (control,
+ *  init = entry at runtime, consumed each turn — runtime concern, Plan B). */
+export type TeamAutoState<Names extends string> = {
+  readonly transcript: Channel<readonly Msg[], Msg | readonly Msg[]>;
+  readonly nextAgent: Channel<Names | null, Names | null>;
+};
+export type TeamFullState<State, Names extends string> = State & TeamAutoState<Names>;

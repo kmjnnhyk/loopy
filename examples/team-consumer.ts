@@ -1,8 +1,8 @@
 // team seam assertions (P1–P7). Compile-checks the .d.ts boundary; the emitted
 // forms are hand-read by the main session for hover cleanliness (spec §10).
-import type { PassToOf, PassToolNames, TeamInputOf } from "loopy";
+import type { PassToOf, PassToolNames, TeamInputOf, StateOf, TeamFullState, Msg } from "loopy";
 import { triage, reviewer, triageState } from "./team";
-import type { Issue } from "./team";
+import type { Issue, ReviewResult } from "./team";
 
 type Expect<T extends true> = T;
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
@@ -19,3 +19,12 @@ export type _P1 = Expect<Equal<
 
 // P4 (input half): only ~input-branded channels are selected as run input.
 export type _P4in = Expect<Equal<TeamInputOf<typeof triageState>, { readonly issue: Issue }>>;
+
+// P3: team auto-injects transcript + nextAgent; author channels survive named.
+type Names = "triage" | "bugFixer" | "docsWriter" | "reviewer";
+type FullState = TeamFullState<typeof triageState, Names>;
+type S = StateOf<FullState>;
+export type _P3a = Expect<Equal<S["nextAgent"], Names | null>>;
+export type _P3b = Expect<Equal<S["transcript"], readonly Msg[]>>;
+export type _P3c = Expect<Equal<S["review"], ReviewResult | null>>;   // author channel named
+export type _P3d = Expect<Equal<S["issue"], Issue>>;                  // inputChannel value survives
