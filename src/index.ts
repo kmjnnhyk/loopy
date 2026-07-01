@@ -245,6 +245,27 @@ export function listChannel<T>(): Channel<readonly T[], T | readonly T[]> {
   };
 }
 
+/** Run-input seed channel: no initial (provided at run). BRANDED so `TeamInputOf`
+ *  can distinguish it from `lastChannel` (both are `Channel<T,T>` otherwise —
+ *  the init is a runtime field, invisible to the type system). See spec §4. */
+export interface InputChannel<T> extends Channel<T, T> {
+  readonly "~input": true;
+}
+export function inputChannel<T>(): InputChannel<T> {
+  return {
+    "~value": undefined as never,
+    "~update": undefined as never,
+    reduce: (_c, u) => u,
+    initial: (() => undefined) as never, // seeded at run; no static init
+    "~input": true,
+  };
+}
+/** select only the ~input-branded channels → the team's run-input shape. */
+export type TeamInputOf<State> = {
+  readonly [K in keyof State as State[K] extends InputChannel<any> ? K : never]:
+    State[K] extends InputChannel<infer T> ? T : never;
+};
+
 export const END: "~end" = "~end";
 export type END = typeof END;
 
