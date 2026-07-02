@@ -17,6 +17,7 @@
 import { runThread as _runThread, RunSuspended } from "./runtime/scheduler";
 import { workflowDriver } from "./runtime/drivers/workflow";
 import { agentDriver, agentNode, AgentMaxStepsError } from "./runtime/drivers/agent";
+import { teamDriver, TeamMaxTurnsError } from "./runtime/drivers/team";
 import { memoryStore } from "./runtime/store";
 import type { Checkpointer } from "./runtime/store";
 import type { ModelClient } from "./runtime/model";
@@ -553,7 +554,7 @@ export function defineLoopy<
     if (!e) throw new Error(`defineLoopy: unknown entry "${name}"`);
     if (e.kind === "agent") return { driver: agentDriver(e.value as never), kind: e.kind };
     if (e.kind === "workflow") return { driver: workflowDriver(e.value as never, agentNode as never), kind: e.kind };
-    throw new Error(`team runtime lands in Task 14 — entry "${name}"`); // Task 14가 teamDriver로 교체
+    return { driver: teamDriver(e.value as never), kind: e.kind };
   };
 
   const exec = async (name: string, input: unknown, opts?: RunOpts, resume?: { value: unknown }): Promise<unknown> => {
@@ -682,6 +683,8 @@ export interface Team<Name extends string, Agents, State, Result> {
   readonly input: IO<TeamInputOf<State>>;
   readonly output: IO<Result>;
   readonly "~deps"?: TeamDeps<Agents>;
+  /** runtime team-control capture (Task 14); type narrowed in the runtime module. */
+  readonly "~team"?: unknown;
 }
 
 /** a channel's stored value type. */
@@ -761,11 +764,31 @@ export function team<
   agents: Agents & GuardAgents<Agents>;
   maxTurns?: number;
 }): TeamBuilder<Name, Agents, State> {
-  void def;
+  const capture = {
+    entry: def.entry as string,
+    agents: def.agents as Record<string, unknown>,
+    maxTurns: def.maxTurns,
+    writes: {} as Record<string, string>,
+    router: null as ((s: unknown) => string) | null,
+  };
+  const mkTeam = (): unknown => ({
+    "~kind": "team",
+    name: def.name,
+    entry: def.entry,
+    agents: def.agents,
+    state: def.state,
+    maxTurns: def.maxTurns,
+    input: undefined as never,  // 타입 전용 표면 (AnyEntry 호환) — 런타임 미사용
+    output: undefined as never,
+    "~team": capture,
+  });
   return {
-    writes: (() => ({ router: () => undefined as never })) as never,
-    router: (() => undefined as never) as never,
-  } as TeamBuilder<Name, Agents, State>;
+    writes: (map: Record<string, string>) => {
+      capture.writes = map;
+      return { router: (fn: (s: unknown) => string) => ((capture.router = fn), mkTeam()) };
+    },
+    router: (fn: (s: unknown) => string) => ((capture.router = fn), mkTeam()),
+  } as unknown as TeamBuilder<Name, Agents, State>;
 }
 
 /* ============================================================================
@@ -781,5 +804,6 @@ export type { ModelClient, ModelRequest, ModelResponse, ModelMsg, StubModel } fr
 export { RunSuspended } from "./runtime/scheduler";
 export { ReplayDivergence } from "./runtime/effects";
 export { AgentMaxStepsError } from "./runtime/drivers/agent";
+export { TeamMaxTurnsError } from "./runtime/drivers/team";
 export { ParseError } from "./runtime/sap";
 export type { Event as RuntimeEvent, ThreadId, RunId } from "./runtime/events";
