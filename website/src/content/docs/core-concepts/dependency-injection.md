@@ -34,11 +34,11 @@ declare module "loopy" {
 }
 ```
 
-After this augmentation, `keyof LoopyDeps` is a literal union of every dependency name your app has declared, and every `deps: [...]` array anywhere in loopy is checked against it, with autocomplete.
+After this augmentation, `keyof LoopyDeps` is a literal union of every dependency name your app has declared. Every `deps: [...]` array anywhere in loopy is checked against it, with autocomplete.
 
 ## Why deps are *declared*, not inferred
 
-It would be nice if loopy could look at a tool's `run` body, see `deps.repo.read(...)`, and infer that the tool needs `"repo"`. TypeScript can't do that — inference only flows *into* a function body from its declared parameter types, never *out of* usage inside the body. So loopy makes the honest trade: **you declare the dependency slice a unit needs, as an array of string-literal keys into `LoopyDeps`**, and everything downstream (`ctx.deps`, an agent's accumulated dependency union, the registry's required-dependency set) is derived from that declaration with `Pick`, `|`, and `Exclude` — no runtime reflection anywhere.
+It would be nice if loopy could look at a tool's `run` body, see `deps.repo.read(...)`, and infer that the tool needs `"repo"`. TypeScript can't do that — inference only flows *into* a function body from its declared parameter types, never *out of* usage inside the body. So loopy makes the honest trade: **you declare the dependency slice a unit needs, as an array of string-literal keys into `LoopyDeps`**. Everything downstream — `ctx.deps`, an agent's accumulated dependency union, the registry's required-dependency set — is derived from that declaration with `Pick`, `|`, and `Exclude`. There's no runtime reflection anywhere.
 
 ```ts
 // examples/tools.ts

@@ -6,6 +6,8 @@
 
 Everything reduces to one primitive: a `Step<Name, In, Out, Deps>`.
 
+[Documentation](https://loopy.js.org) · [한국어 문서](https://loopy.js.org/ko/)
+
 </div>
 
 ---

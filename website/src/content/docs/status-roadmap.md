@@ -13,9 +13,9 @@ loopy is being built **type-surface first**: the compile-time contract is locked
 - **Must-error fixtures** (`examples/_negative.ts`) — mistakes that are *supposed* to fail a build, compiled separately, so the exact diagnostic (`TS2820`, `TS2741`, ...) is pinned down. `team()`'s slice alone covers five such fixtures.
 - **Hand-read `.d.ts` emit** under `isolatedDeclarations: true` — the package boundary itself was inspected, not just the source.
 
-`team()` in particular went through its own completion gate — seven positive and five negative compile-assertions, plus a 10-agent scale check — before merging into `master`; see `examples/team.ts` for the anchor scenario (the same PR-triage example walked through in [The team model, explained](/team-model/)).
+`team()` in particular went through its own completion gate — seven positive and five negative compile-assertions, plus a 10-agent scale check — before merging into `master`. See `examples/team.ts` for the anchor scenario (the same PR-triage example walked through in [The team model, explained](/team-model/)).
 
-**What's *not* real yet, for any of the above:** `run` bodies are stubs. `tool()`'s `run` executes exactly as you wrote it if you call it directly in a script, but nothing in loopy today drives an actual model loop, executes a workflow or team graph turn by turn, or persists anything — see the next section. This is true of `team()` too: the type surface (who's allowed to hand off to whom, what a router can return, how outputs land in channels) is fully checked; nothing yet actually runs a triage loop.
+**What's *not* real yet, for any of the above:** `run` bodies are stubs. `tool()`'s `run` executes exactly as you wrote it if you call it directly in a script, but nothing in loopy today drives an actual model loop, executes a workflow or team graph turn by turn, or persists anything. See the next section. This is true of `team()` too: the type surface (who's allowed to hand off to whom, what a router can return, how outputs land in channels) is fully checked. Nothing yet actually runs a triage loop.
 
 ## What's designed but not built (the runtime)
 
@@ -44,7 +44,7 @@ The control loop, event-sourced replay, `passTo` consumption, and human-in-the-l
 | Schema-Aligned Parsing (real validation) | 🚧 designed, not implemented |
 | Parallel agents, nested teams, typed error channels | 🔭 not designed yet |
 | `loopy dev` (observability UI), recorded-replay testing | 🔭 spec written, no implementation plan |
-| Published npm package | ❌ not published — clone the repo (see [Getting Started](/getting-started/)) |
+| Published npm package | ❌ not published — clone the repo (see [Quick Start](/getting-started/)) |
 
 ## Verifying the type surface yourself
 
@@ -54,4 +54,4 @@ tsc -p tsconfig.examples.json # consumer build: emits inferred .d.ts to dist-exa
 tsc -p tsconfig.negative.json # must-error fixtures: captures the expected diagnostics
 ```
 
-See [Getting Started](/getting-started/) for what each of these actually checks.
+See [Quick Start](/getting-started/) for what each of these actually checks.

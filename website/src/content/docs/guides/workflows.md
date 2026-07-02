@@ -50,7 +50,7 @@ const designFlow = flow.flow((b) =>
 );
 ```
 
-`.branch("build", (s) => ...)` is where the retry loop lives: if the build failed, go back to `codeGen` and try again; loopy doesn't distinguish a cycle from any other edge — it's just a router returning a name that happens to point backward. `s` here is `StateOf<typeof state>`, so `s.build?.ok` is a real, narrowable property access.
+`.branch("build", (s) => ...)` is where the retry loop lives: if the build failed, go back to `codeGen` and try again. loopy doesn't distinguish a cycle from any other edge — it's just a router returning a name that happens to point backward. `s` here is `StateOf<typeof state>`, so `s.build?.ok` is a real, narrowable property access.
 
 Try a typo — `.branch("build", (s) => (s.build?.ok ? "verfy" : "codeGen"))` — and you get `TS2820`, with a "did you mean 'verify'?" suggestion, because the router's return type is the exact literal union of node names.
 

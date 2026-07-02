@@ -3,7 +3,7 @@ title: "Guide: a multi-agent team"
 description: Build a PR-triage team step by step — an intake agent hands off to a specialist, a reviewer approves or bounces it back.
 ---
 
-This guide builds `prTriage`: an issue comes in, a triage agent decides whether it's a bug or a docs request and hands it to the right specialist, the specialist hands it to a reviewer, and the reviewer either approves it or bounces it back. For the concepts behind each piece — what a channel is, why `passTo` and `.router()` are both needed — see [The team model, explained](/team-model/). This guide is the "how do I build one," start to finish.
+This guide builds `prTriage`. An issue comes in, a triage agent decides whether it's a bug or a docs request, and hands it to the right specialist. The specialist hands it to a reviewer, who either approves it or bounces it back. For the concepts behind each piece — what a channel is, why `passTo` and `.router()` are both needed — see [The team model, explained](/team-model/). This guide is the "how do I build one," start to finish.
 
 ## 1. Shape the domain types and state
 
@@ -45,7 +45,7 @@ export const docsWriter = agent({
 });
 ```
 
-`triage` can hand off to either specialist — whichever the model decides fits, after actually reading the issue. `bugFixer` and `docsWriter` each only ever hand off to `reviewer`; that's a fixed next step, not a judgement call, but it's still expressed as `passTo` because it's still *this specific agent* announcing where its own work goes next.
+`triage` can hand off to either specialist — whichever the model decides fits, after actually reading the issue. `bugFixer` and `docsWriter` each only ever hand off to `reviewer`. That's a fixed next step, not a judgement call — but it's still expressed as `passTo`, because it's still *this specific agent* announcing where its own work goes next.
 
 ## 3. Give the reviewer a way to ask a human, and no `passTo`
 
@@ -88,7 +88,7 @@ export const prTriage = team({
 
 `entry: "triage"` also seeds `nextAgent` for turn zero, so `triage` runs first without anything special in the router. `.writes({ reviewer: "review" })` is what makes `s.review` in the router populated at all — without it, the reviewer's output never lands anywhere the router can see.
 
-**Why check `nextAgent` before `review` (line ①, before ②/③):** when a rejected issue goes back to, say, `bugFixer`, and `bugFixer` finishes and hands off to `reviewer` again, that fresh handoff needs to win over the *stale* `review` value still sitting in the channel from the previous round — otherwise the router would keep reading the old "rejected" verdict and loop `bugFixer` forever instead of routing to `reviewer` for a fresh look.
+**Why check `nextAgent` before `review` (line ①, before ②/③):** when a rejected issue goes back to, say, `bugFixer`, and `bugFixer` finishes and hands off to `reviewer` again, that fresh handoff needs to win over the *stale* `review` value still sitting in the channel from the previous round. Otherwise the router would keep reading the old "rejected" verdict and loop `bugFixer` forever, instead of routing to `reviewer` for a fresh look.
 
 ## 5. Register and run it
 

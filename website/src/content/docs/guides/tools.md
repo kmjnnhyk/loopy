@@ -7,7 +7,7 @@ This guide walks through building one real tool, `editFile`, from `examples/tool
 
 ## 1. Declare your dependencies once
 
-Before writing any tool, your app declares the dependencies it has, by augmenting `LoopyDeps`:
+Before writing any tool, your app declares its dependencies by augmenting `LoopyDeps`:
 
 ```ts
 // deps.ts
@@ -56,11 +56,11 @@ export const editFile = tool({
 });
 ```
 
-`deps: ["repo"]` is what makes `deps.repo` available inside `run` — try `deps.figma` here (a dependency this tool never declared) and TypeScript rejects it with `TS2339`, at the call site, before anything runs.
+`deps: ["repo"]` is what makes `deps.repo` available inside `run`. Try `deps.figma` here — a dependency this tool never declared — and TypeScript rejects it with `TS2339`, at the call site, before anything runs.
 
 ## 4. Add an `idempotencyKey` for non-idempotent effects
 
-loopy's durability model is at-least-once: a tool call that crashes mid-flight gets re-issued on recovery. `editFile`'s replace-in-place is naturally safe to run twice (same find/replace applied to already-edited content is a no-op the second time in the common case), but a tool like `createFile` isn't — running it twice could double-create or clobber. Declare `idempotencyKey` so a re-issued call can be recognized once the runtime implements deduplication:
+loopy's durability model is at-least-once: a tool call that crashes mid-flight gets re-issued on recovery. `editFile`'s replace-in-place is naturally safe to run twice — in the common case, the same find/replace applied to already-edited content is a no-op the second time. A tool like `createFile` isn't: running it twice could double-create or clobber. Declare `idempotencyKey` so a re-issued call can be recognized once the runtime implements deduplication:
 
 ```ts
 export const editFile = tool({
@@ -70,11 +70,11 @@ export const editFile = tool({
 });
 ```
 
-Think of the key as "what makes this call the *same* call if it happens again" — usually a stable hash of the meaningfully-identifying input fields, not the whole input object.
+Think of the key as "what makes this call the *same* call if it happens again." It's usually a stable hash of the meaningfully-identifying input fields, not the whole input object.
 
 ## Result
 
-`editFile` is a fully typed [`Step`](/core-concepts/step/): its `name` is preserved as the literal `"editFile"`, its dependency requirement is exactly `"repo"`, and its `run` signature is `(input: { path: string; find: string; replace: string }, ctx: ToolCtx<"repo">) => Promise<{ applied: boolean }>`. It can now be passed into an [`agent()`](/reference/agent/)'s `tools` array or used directly as a [`workflow()`](/reference/workflow/) node.
+`editFile` is a fully typed [`Step`](/core-concepts/step/). Its `name` is preserved as the literal `"editFile"`, its dependency requirement is exactly `"repo"`, and its `run` signature is `(input: { path: string; find: string; replace: string }, ctx: ToolCtx<"repo">) => Promise<{ applied: boolean }>`. It can now be passed into an [`agent()`](/reference/agent/)'s `tools` array or used directly as a [`workflow()`](/reference/workflow/) node.
 
 ## Next
 

@@ -4,16 +4,16 @@ description: React for agents — a type-safe TypeScript DSL for LLM agents, too
 template: splash
 banner:
   content: |
-    loopy is a prototype — the type surface is complete and compile-checked, the runtime is not yet implemented. See <a href="status-roadmap/">Status &amp; Roadmap</a>.
+    loopy is a prototype — the type surface is complete and compile-checked, the runtime is not yet implemented. See <a href="/status-roadmap/">Status &amp; Roadmap</a>.
 hero:
-  tagline: '<strong>React for agents.</strong> A type-safe TypeScript DSL for LLM agents, tools, workflows, and teams — everything reduces to one primitive, a <code>Step</code>.'
+  tagline: '<strong>React for agents.</strong> Build LLM agents, tools, workflows, and multi-agent teams in one type-safe TypeScript DSL.'
   actions:
-    - text: Get Started
-      link: /loopy/getting-started/
+    - text: Quick Start
+      link: /getting-started/
       icon: right-arrow
-    - text: View on GitHub
-      link: https://github.com/kmjnnhyk/loopy
-      icon: external
+    - text: Introduction
+      link: /introduction/
+      icon: open-book
       variant: minimal
 ---
 
@@ -23,84 +23,29 @@ import { Card, CardGrid, Badge } from '@astrojs/starlight/components';
 	<Badge text="Prototype — type surface complete, runtime not yet implemented" variant="caution" size="large" />
 </div>
 
-## A glance
-
-Building with LLMs means moving along a spectrum: from **deterministic workflows** (you decide every step) to **autonomous agents** (the model decides). loopy makes the whole spectrum a single, type-checked model — tools, agents, deterministic workflows, and multi-agent teams are all the same primitive, a `Step`.
-
-```ts
-import { agent, tool, io, team, inputChannel, lastChannel, END, defineLoopy } from "loopy";
-
-// A tool declares only the dependency slice it needs.
-const editFile = tool({
-  name: "editFile",
-  description: "Apply an edit to a file.",
-  input: io<{ path: string; patch: string }>(),
-  output: io<{ applied: boolean }>(),
-  deps: ["repo"],
-  run: async (i, { deps }) => {
-    await deps.repo.write(i.path, i.patch);
-    return { applied: true };
-  },
-});
-
-// An agent owns a model loop; `passTo` captures its handoff targets by name.
-const bugFixer = agent({
-  name: "bugFixer", model: "claude-opus",
-  instructions: "Fix the bug, then hand to the reviewer.",
-  input: io<{ issue: Issue }>(), output: io<{ done: boolean }>(),
-  tools: [editFile], deps: ["repo"], passTo: ["reviewer"],
-});
-
-// A team is a multi-agent loop over shared state — a router picks the next
-// single agent each turn; `passTo` targets are membership-checked at compile time.
-const prTriage = team({
-  name: "prTriage",
-  entry: "triage",
-  state: {
-    issue:  inputChannel<Issue>(),                     // run input, provided at run
-    review: lastChannel<ReviewResult | null>(null),    // domain channel
-    // `transcript` + `nextAgent` are auto-injected by the team
-  },
-  agents: { triage, bugFixer, docsWriter, reviewer },
-  maxTurns: 20,
-})
-  .writes({ reviewer: "review" })          // agent output → state channel (output ⊑ channel, checked)
-  .router((s) => {                         // control rule; a stray key is a compile error
-    if (s.nextAgent) return s.nextAgent;   // follow a handoff request first
-    if (s.review?.approved) return END;    // discriminated union narrows — no `!` needed
-    if (s.review) return s.review.assignee;
-    return END;
-  });
-
-// The registry proves every declared dependency is supplied, then types rt.run.
-const rt = defineLoopy({ agents: {}, workflows: {}, teams: { prTriage }, deps: { repo } });
-const out: ReviewResult | null = await rt.run("prTriage", { issue });
-```
-
-*(`triage`, `docsWriter`, `reviewer`, `Issue`, and `ReviewResult` are elided above for brevity — see [the team model, explained](team-model/) for the full, runnable version.)*
-
-## Why loopy
-
-- **Type-safe end to end.** Inputs, outputs, dependencies, and handoff targets are all inferred and checked at compile time. A typo in a router or a missing dependency is a red squiggle, not a 3&nbsp;a.m. page.
-- **Functional dependency injection.** No decorators, no globals. Each unit *declares* the dependency slice it needs; the registry proves every dependency is supplied before anything can run.
-- **Event-sourced by design.** Every turn, tool call, and state change is a logged event, so replay is a pure fold — deterministic tests with zero LLM calls, once the runtime lands.
-- **Vendor-neutral schemas.** A [Standard Schema](https://standardschema.dev/)-shaped carrier means your Zod / Valibot / ArkType types flow through unchanged.
-
 <CardGrid>
-	<Card title="Getting Started" icon="rocket">
-		Clone the repo and explore the type surface with `tsc` — no install, no npm package yet.
-		[Read the guide →](getting-started/)
+	<Card title="One primitive" icon="puzzle">
+		Tools, agents, workflows, and teams all reduce to a single shape — a `Step`. Learn it once, compose everything.
+		[The Step spine →](/core-concepts/step/)
 	</Card>
-	<Card title="Core Concepts" icon="puzzle">
-		Everything is a `Step`. Learn the spine, schemas, dependency injection, channels, and event sourcing.
-		[Start with the Step spine →](core-concepts/step/)
+	<Card title="Type-safe end to end" icon="approve-check">
+		Inputs, outputs, dependencies, and handoff targets are inferred and checked at compile time. A typo is a red squiggle, not a runtime incident.
+		[Why loopy →](/introduction/)
 	</Card>
-	<Card title="API Reference" icon="document">
-		`tool()`, `agent()`, `workflow()`, `team()`, channels, and the registry — one page per primitive.
-		[Browse the reference →](reference/)
+	<Card title="Functional dependency injection" icon="setting">
+		No decorators, no globals. Each unit declares the dependency slice it needs, and the registry proves everything is supplied before anything runs.
+		[Dependency injection →](/core-concepts/dependency-injection/)
 	</Card>
-	<Card title="The team model" icon="comment">
-		Multi-agent teams, explained end to end with a PR-triage walkthrough.
-		[Read the deep dive →](team-model/)
+	<Card title="Event-sourced by design" icon="list-format">
+		Every turn, tool call, and state change is a logged event. Replay is a pure fold — deterministic tests with zero LLM calls.
+		[Event sourcing & replay →](/core-concepts/event-sourcing/)
+	</Card>
+	<Card title="Multi-agent teams" icon="comment-alt">
+		A team is a router over shared state. Handoff targets are membership-checked at compile time, so agents can't hand work to someone who isn't there.
+		[The team model →](/team-model/)
+	</Card>
+	<Card title="Vendor-neutral schemas" icon="random">
+		A [Standard Schema](https://standardschema.dev/)-shaped carrier means your Zod, Valibot, or ArkType types flow through unchanged.
+		[Schemas (IO) →](/core-concepts/schemas/)
 	</Card>
 </CardGrid>

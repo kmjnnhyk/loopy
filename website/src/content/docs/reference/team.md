@@ -120,7 +120,7 @@ The **cardinality** of the map also decides what `rt.run(...)` returns, via `Wri
 | exactly one mapping | that channel's value type |
 | zero mappings, or two or more | the full `StateOf<...>` snapshot |
 
-This is deliberate — a single mapping is the common case ("give me the reviewer's verdict"), and anything else falls back to the whole state rather than silently guessing which one channel you meant.
+This is deliberate. A single mapping is the common case ("give me the reviewer's verdict") — anything else falls back to the whole state, rather than silently guessing which one channel you meant.
 
 ## Full example — PR triage
 

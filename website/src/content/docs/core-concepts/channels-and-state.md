@@ -5,7 +5,7 @@ description: State in loopy is a record of typed channels, each with a declared 
 
 ## State is channels, not variables
 
-A workflow — and a team, which is built on the same machinery — doesn't have "variables"; it has **channels**. Each channel is a named slot with a value type, an update type, and a reducer that folds an incoming update into the current value:
+A workflow — and a team, which is built on the same machinery — doesn't have "variables." It has **channels**. Each channel is a named slot with a value type, an update type, and a reducer that folds an incoming update into the current value:
 
 ```ts
 export interface Channel<V, U = V> {
@@ -16,7 +16,7 @@ export interface Channel<V, U = V> {
 }
 ```
 
-`V` and `U` can differ — `listChannel`'s value is `readonly T[]`, but you can hand it either one new item or a batch. A node doesn't mutate state directly; it returns updates, and the runtime folds each one through its channel's `reduce`. This is why the design describes the whole engine as one invariant: **`state = fold(reduce, log, initial)`**. The live state a router reads is a cache of that fold; the append-only event log underneath is the only real authority. That invariant is also what makes [event-sourced replay](/core-concepts/event-sourcing/) possible once the runtime exists — replaying a log is just re-running the same fold.
+`V` and `U` can differ — `listChannel`'s value is `readonly T[]`, but you can hand it either one new item or a batch. A node doesn't mutate state directly. It returns updates, and the runtime folds each one through its channel's `reduce`. This is why the design describes the whole engine as one invariant: **`state = fold(reduce, log, initial)`**. The live state a router reads is a cache of that fold. The append-only event log underneath is the only real authority. That invariant is also what makes [event-sourced replay](/core-concepts/event-sourcing/) possible once the runtime exists — replaying a log is just re-running the same fold.
 
 ## The three channel constructors
 
@@ -40,7 +40,7 @@ export function listChannel<T>(): Channel<readonly T[], T | readonly T[]> {
 | `listChannel()` | append — accumulates, one item or a batch at a time | a running log, e.g. a conversation transcript |
 | `inputChannel<T>()` | overwrite, but with **no static initial value** — seeded by the run's actual input argument | a run's own input, e.g. the issue a team is triaging |
 
-`inputChannel` is used by [`team()`](/reference/team/). It's the same shape as `lastChannel` at the value/update level, but it's *branded* (`readonly "~input": true`) so the type machinery can pick out exactly the channels that make up a team's run-input shape, separate from its ordinary domain channels:
+`inputChannel` is used by [`team()`](/reference/team/). It's the same shape as `lastChannel` at the value/update level, but it's *branded* (`readonly "~input": true`). This lets the type machinery pick out exactly the channels that make up a team's run-input shape, separate from its ordinary domain channels:
 
 ```ts
 export interface InputChannel<T> extends Channel<T, T> {

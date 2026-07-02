@@ -5,7 +5,7 @@ description: loopy carries static types through a vendor-neutral, Standard-Schem
 
 ## The problem: a static type across a runtime boundary
 
-A tool's input and output need two things at once: a **static TypeScript type** the compiler can check against, and — eventually — a **runtime validator** that can coerce whatever an LLM actually hands back (malformed JSON, markdown fences, a trailing comma) into that type. loopy solves this with a single carrier type, `IO`, shaped like the [Standard Schema](https://standardschema.dev/) spec, so any validator library that implements it (Zod, Valibot, ArkType, ...) can be dropped in without loopy depending on any of them.
+A tool's input and output need two things at once: a **static TypeScript type** the compiler can check against, and — eventually — a **runtime validator**. The validator needs to coerce whatever an LLM actually hands back (malformed JSON, markdown fences, a trailing comma) into that type. loopy solves this with a single carrier type, `IO`, shaped like the [Standard Schema](https://standardschema.dev/) spec. Any validator library that implements it — Zod, Valibot, ArkType, and others — can be dropped in without loopy depending on any of them.
 
 ```ts
 export interface IO<In, Out = In> {
@@ -23,7 +23,7 @@ export type InferIn<S extends IO<any, any>> = NonNullable<S["~standard"]["types"
 export type InferOut<S extends IO<any, any>> = NonNullable<S["~standard"]["types"]>["output"];
 ```
 
-The static `In`/`Out` types live in a **phantom property** (`~standard.types`) — it's never actually populated at runtime; it exists purely so `InferIn<S>` / `InferOut<S>` can pull the type back out with an indexed access. Every place in loopy that needs "the actual TypeScript type this schema describes" — a tool's `run` parameter, a workflow node's return type — goes through `InferOut<...>`, never the schema object itself.
+The static `In`/`Out` types live in a **phantom property** (`~standard.types`). It's never actually populated at runtime — it exists purely so `InferIn<S>` / `InferOut<S>` can pull the type back out with an indexed access. Every place in loopy that needs "the actual TypeScript type this schema describes" — a tool's `run` parameter, a workflow node's return type — goes through `InferOut<...>`, never the schema object itself.
 
 ## `io<Out, In>()` — the current placeholder constructor
 
@@ -41,7 +41,7 @@ export function io<Out, In = Out>(vendor: string = "loopy"): IO<In, Out> {
 }
 ```
 
-`io<{ path: string; patch: string }>()` gives you a schema whose static output type is `{ path: string; patch: string }`; at runtime, `validate` is currently an identity cast, not real validation — consistent with the rest of the repository being a type-only skeleton (see [Status & Roadmap](/status-roadmap/)). When the runtime lands, this is the seam where real coercion of LLM output into a schema (with typed parse errors instead of silent fail-open) plugs in, without changing `InferOut<S>` or anything downstream of it.
+`io<{ path: string; patch: string }>()` gives you a schema whose static output type is `{ path: string; patch: string }`. At runtime, `validate` is currently an identity cast, not real validation — consistent with the rest of the repository being a type-only skeleton (see [Status & Roadmap](/status-roadmap/)). When the runtime lands, this is the seam where real coercion of LLM output into a schema (with typed parse errors instead of silent fail-open) plugs in, without changing `InferOut<S>` or anything downstream of it.
 
 ## Using it
 
