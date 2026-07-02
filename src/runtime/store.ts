@@ -27,7 +27,11 @@ export function memoryStore(): Checkpointer {
     async appendEvents(t: ThreadId, es: readonly Event[]): Promise<void> {
       const b = bucket(t);
       const seen = new Set(b.events.map((e) => e.seq));
-      for (const e of es) if (!seen.has(e.seq)) b.events.push(e);
+      for (const e of es)
+        if (!seen.has(e.seq)) {
+          seen.add(e.seq);
+          b.events.push(e);
+        }
       b.events.sort((a, z) => a.seq - z.seq);
     },
     async save(t: ThreadId, s: Snapshot): Promise<void> {

@@ -19,6 +19,11 @@ describe("memoryStore", () => {
     await s.appendEvents(threadId("t"), [ev(1), ev(2)]); // crash-mid-flush replay
     expect((await s.readLog(threadId("t"))).map((e) => e.seq)).toEqual([0, 1, 2]);
   });
+  test("idempotent append: duplicate seq within a single batch ignored", async () => {
+    const s = memoryStore();
+    await s.appendEvents(threadId("t"), [ev(0), ev(1), ev(1, "StepEnded")]);
+    expect((await s.readLog(threadId("t"))).map((e) => e.seq)).toEqual([0, 1]);
+  });
   test("load returns snapshot + full events; unknown thread → null", async () => {
     const s = memoryStore();
     expect(await s.load(threadId("nope"))).toBeNull();
