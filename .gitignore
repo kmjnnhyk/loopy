@@ -3,3 +3,8 @@ dist/
 dist-examples/
 *.tsbuildinfo
 .remember/
+
+# Internal design / planning / brainstorming artifacts — kept on disk locally,
+# not published to the public repo. The user-facing docs live in the docs site.
+docs/
+loopy-vs-langchain.html

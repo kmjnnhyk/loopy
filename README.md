@@ -133,13 +133,9 @@ and proven before any runtime is written.
 
 ## Documentation
 
-The design is documented in depth under [`docs/`](./docs):
-
-- [`docs/design/team-explained.md`](./docs/design/team-explained.md) — the `team` multi-agent model, explained.
-- [`docs/design/core-state-and-types.md`](./docs/design/core-state-and-types.md) — the Step spine, state, and type machinery.
-- [`docs/design/research-design-space.md`](./docs/design/research-design-space.md) — the design-space study (LangChain, LangGraph, Vercel AI SDK, Redux, …) behind the API.
-- [`docs/design/HANDOFF.md`](./docs/design/HANDOFF.md) — project context and verification discipline.
-- [`docs/superpowers/specs/`](./docs/superpowers/specs) & [`docs/superpowers/plans/`](./docs/superpowers/plans) — design specs and implementation plans.
+A full documentation site is in progress. In the meantime, the annotated
+[`examples/`](./examples) are the most accurate usage reference — they compile
+against the type surface.
 
 ## Verifying the type surface
 
