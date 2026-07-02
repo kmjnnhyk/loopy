@@ -2,16 +2,41 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
+// Deployed as a GitHub Pages *project* page: https://kmjnnhyk.github.io/loopy/
+const SITE = 'https://kmjnnhyk.github.io';
+const BASE = '/loopy';
+
+// Starlight's own nav/sidebar/assets auto-prefix links with `base`, but plain
+// author-written Markdown links (`[x](/reference/tool/)`) do not — under the
+// `/loopy` prefix they'd 404. This rehype plugin prefixes every root-absolute
+// internal href/src with BASE at build time, so we keep writing natural
+// `/section/page/` links in content and they resolve correctly. Dependency-free
+// hast walk (no unist-util-visit import needed).
+function rehypeBaseLinks() {
+	const prefix = (url) =>
+		typeof url === 'string' &&
+		url.startsWith('/') &&
+		!url.startsWith('//') && // protocol-relative
+		!url.startsWith(BASE + '/') &&
+		url !== BASE
+			? BASE + url
+			: url;
+	const walk = (node) => {
+		if (!node || typeof node !== 'object') return;
+		if (node.type === 'element' && node.properties) {
+			if (node.tagName === 'a') node.properties.href = prefix(node.properties.href);
+			if (node.tagName === 'img') node.properties.src = prefix(node.properties.src);
+		}
+		if (Array.isArray(node.children)) for (const child of node.children) walk(child);
+	};
+	return (tree) => walk(tree);
+}
+
 // https://astro.build/config
-//
-// NOTE on `site`/`base`: intentionally unset (site served at root). All internal
-// links in src/content/docs/**/*.md are root-relative (e.g. `/getting-started/`),
-// which Starlight's own nav/assets auto-prefix with `base` but plain Markdown
-// links do not. If this ends up deployed as a GitHub Pages *project* page
-// (https://kmjnnhyk.github.io/loopy/), set `base: '/loopy'` here AND rewrite the
-// Markdown cross-links to be base-aware first — otherwise every hand-written
-// `[text](/section/page/)` link in the docs 404s under the `/loopy` prefix.
 export default defineConfig({
+	site: SITE,
+	base: BASE,
+	markdown: { rehypePlugins: [rehypeBaseLinks] },
 	integrations: [
 		starlight({
 			title: 'loopy',
