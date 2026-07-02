@@ -6,6 +6,7 @@ import { memoryStore } from "../../src/runtime/store";
 import { threadId } from "../../src/runtime/events";
 import { stubModel, type ModelResponse } from "../../src/runtime/model";
 import { ParseError } from "../../src/runtime/sap";
+import { ReplayDivergence } from "../../src/runtime/effects";
 
 const answer = (obj: unknown): ModelResponse => ({ text: JSON.stringify(obj), stopReason: "end_turn" });
 const callTools = (...calls: Array<{ id: string; name: string; args: unknown }>): ModelResponse => ({
@@ -146,5 +147,45 @@ describe("agentDriver", () => {
       entry: "a1", input: { q: "hi" }, models: { stub: m },
     })) as { output: unknown };
     expect(env.output).toEqual({ done: true }); // 부모 run이 완주함
+  });
+
+  // I-1 regression: infra/control errors must fail loud through act's catch, not
+  // get swallowed into an ERROR tool_result feedback message. ReplayDivergence is
+  // the determinism-enforcement signal — feeding it back as a normal tool error
+  // would let a replay divergence silently continue instead of aborting the run.
+  test("tool ReplayDivergence fails loud, not fed back as ERROR tool result", async () => {
+    const divergent = tool({
+      name: "divergent", description: "always raises a replay divergence",
+      input: io<{ x: number }>(), output: io<{ x: number }>(),
+      run: async () => { throw new ReplayDivergence("p", "a", "b"); },
+    });
+    const { p } = run(
+      [callTools({ id: "c1", name: "divergent", args: { x: 1 } })],
+      mkAgent({ tools: [divergent] } as never),
+    );
+    await expect(p).rejects.toThrow(ReplayDivergence);
+  });
+
+  // Opposite polarity of "failing sub-agent feeds back as ERROR tool result" above:
+  // that test uses a sub-agent ParseError (tool-domain — not on the allowlist, so it
+  // still feeds back). Here the sub-agent exceeds its own maxSteps, which is a
+  // control/infra signal (allowlisted) — the parent run must reject, not continue.
+  test("sub-agent AgentMaxStepsError fails loud, parent rejects (contrast with ParseError case above)", async () => {
+    const sub = agent({
+      name: "sub", model: "stub", instructions: "call tools forever",
+      input: io<{ goal: string }>(), output: io<{ v: number }>(),
+      tools: [echo],
+      maxSteps: 1,
+    } as never);
+    const parent = mkAgent({ tools: [sub] } as never);
+    const { p } = run(
+      [
+        callTools({ id: "c1", name: "sub", args: { goal: "g" } }), // parent think → call sub
+        callTools({ id: "s1", name: "echo", args: { x: 1 } }),     // sub think #1 → tool call (thinks=1 == maxSteps)
+      ] as never,
+      parent,
+      "submaxsteps",
+    );
+    await expect(p).rejects.toThrow(AgentMaxStepsError);
   });
 });

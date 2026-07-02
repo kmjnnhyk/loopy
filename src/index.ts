@@ -14,10 +14,10 @@
 // function bodies (driver factories, defineLoopy/loopy call time), never at
 // module top-level evaluation. Type-only imports are unaffected either way.
 
-import { runThread as _runThread, RunSuspended } from "./runtime/scheduler";
+import { runThread as _runThread } from "./runtime/scheduler";
 import { workflowDriver } from "./runtime/drivers/workflow";
-import { agentDriver, agentNode, AgentMaxStepsError } from "./runtime/drivers/agent";
-import { teamDriver, TeamMaxTurnsError } from "./runtime/drivers/team";
+import { agentDriver, agentNode } from "./runtime/drivers/agent";
+import { teamDriver } from "./runtime/drivers/team";
 import { memoryStore } from "./runtime/store";
 import type { Checkpointer } from "./runtime/store";
 import type { ModelClient } from "./runtime/model";

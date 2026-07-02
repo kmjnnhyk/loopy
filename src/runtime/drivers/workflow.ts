@@ -66,6 +66,8 @@ export function workflowDriver(wf: AnyWorkflowRt, agentNode?: AgentNodeFactory):
       if (!g.returns) throw new Error(`workflow "${wf.name}" needs .returns() to be runnable`);
       return g.returns(state);
     },
+    // v1: no iteration cap for workflows — unlike agent maxSteps / team maxTurns,
+    // router termination (an edge/branch reaching END) is the author's responsibility.
     guard: () => {},
   };
 }

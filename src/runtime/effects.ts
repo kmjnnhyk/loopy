@@ -142,6 +142,8 @@ export class EventSession {
       this.pendingWrites.delete(this.nextToFlush);
       this.nextToFlush++;
       try {
+        // synchronous listener, invoked inline on the flush path — a slow/heavy sink
+        // blocks event persistence for every writer behind it; self-queue if needed.
         this.onEvent?.(event);
       } catch {
         // onEvent is a non-blocking sink — listener errors must never affect the run

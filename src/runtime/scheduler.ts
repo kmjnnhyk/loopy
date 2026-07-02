@@ -185,6 +185,11 @@ export async function runThread(o: RunOptions): Promise<unknown> {
     deps: o.deps ?? {}, models: o.models ?? {},
   };
 
+  // the three store.save() calls below (suspended/error/done) are write-only:
+  // observability/DevTools snapshots that the runtime itself never reads back on
+  // a later run — resume derives pending state from the LOG (derivePendingFromLog
+  // above), which is the sole authority. losing/corrupting a snapshot cannot
+  // desync replay.
   let output: unknown;
   try {
     output = await runGraph(o.driver, "", k, o.input);

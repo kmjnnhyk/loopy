@@ -33,7 +33,7 @@ export type Event = EventBase &
   (
     | { readonly type: "RunStarted"; readonly entry: string; readonly input: unknown }
     | { readonly type: "StepStarted" }
-    | { readonly type: "StepEnded"; readonly next?: string }
+    | { readonly type: "StepEnded" }
     | { readonly type: "ModelCallRequested"; readonly effectId: number; readonly posKey: string; readonly argsDigest: string; readonly req: unknown }
     | { readonly type: "ModelCallReturned"; readonly effectId: number; readonly ok: boolean; readonly value?: unknown; readonly error?: SerializedError }
     | { readonly type: "ToolCalled"; readonly effectId: number; readonly posKey: string; readonly argsDigest: string; readonly tool: string; readonly args: unknown }

@@ -1,11 +1,16 @@
 import { END, lastChannel, listChannel, type IO } from "../../index";
 import { rawChannel, type ChannelRecord, type StateSnapshot } from "../channels";
-import { isSuspend, type RuntimeCtx, type ToolLike } from "../effects";
+import { isSuspend, ReplayDivergence, type RuntimeCtx, type ToolLike } from "../effects";
 import { stableStringify } from "../events";
 import type { ModelMsg, ModelRequest, ModelResponse, ToolCallReq, ToolDecl } from "../model";
 import { parseStructured, ParseError } from "../sap";
 import { runGraph, type Driver, type KernelCtx, type RunnableNode } from "../scheduler";
 import type { RtStep } from "./workflow";
+// NOTE: genuine ESM cycle (team.ts imports agentDriver/RtAgent from this module).
+// Safe: TeamMaxTurnsError is only touched inside the act node's catch bodies below
+// (runtime, call-time access), never at this module's top-level evaluation — same
+// discipline as the cycle documented in src/index.ts.
+import { TeamMaxTurnsError } from "./team";
 
 export interface RtAgent {
   readonly name: string;
@@ -109,7 +114,14 @@ export function agentDriver(agent: RtAgent, opts: { passToTargets?: readonly str
             )) as { output: unknown };
             results.push({ role: "tool", toolCallId: call.id, content: stableStringify(env.output) });
           } catch (err) {
-            if (isSuspend(err)) throw err; // HITL — 커널로 전파 (sub-agent 안의 interrupt 포함)
+            if (
+              isSuspend(err) ||
+              err instanceof ReplayDivergence ||
+              err instanceof AgentMaxStepsError ||
+              err instanceof TeamMaxTurnsError
+            ) {
+              throw err; // control/infra signals must fail loud — only tool-domain errors feed back
+            }
             const msg = err instanceof Error ? err.message : String(err);
             results.push({ role: "tool", toolCallId: call.id, content: `ERROR ${call.name}: ${msg}` });
           }
@@ -119,7 +131,14 @@ export function agentDriver(agent: RtAgent, opts: { passToTargets?: readonly str
           const value = await ctx.callTool(t as ToolLike, call.args);
           results.push({ role: "tool", toolCallId: call.id, content: stableStringify(value) });
         } catch (err) {
-          if (isSuspend(err)) throw err; // HITL — 커널로 전파
+          if (
+            isSuspend(err) ||
+            err instanceof ReplayDivergence ||
+            err instanceof AgentMaxStepsError ||
+            err instanceof TeamMaxTurnsError
+          ) {
+            throw err; // control/infra signals must fail loud — only tool-domain errors feed back
+          }
           const msg = err instanceof Error ? err.message : String(err);
           results.push({ role: "tool", toolCallId: call.id, content: `ERROR ${call.name}: ${msg}` });
         }
