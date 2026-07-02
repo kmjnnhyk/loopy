@@ -3,10 +3,6 @@ title: "Guide: a multi-agent team"
 description: Build a PR-triage team step by step — an intake agent hands off to a specialist, a reviewer approves or bounces it back.
 ---
 
-:::note[Branch status]
-`team()` lives on the `feat/team-type-surface` branch (implemented and type-verified, not yet merged into `master`). Every snippet below is copied from that branch's `examples/team.ts`. See [Status & Roadmap](/status-roadmap/).
-:::
-
 This guide builds `prTriage`: an issue comes in, a triage agent decides whether it's a bug or a docs request and hands it to the right specialist, the specialist hands it to a reviewer, and the reviewer either approves it or bounces it back. For the concepts behind each piece — what a channel is, why `passTo` and `.router()` are both needed — see [The team model, explained](/team-model/). This guide is the "how do I build one," start to finish.
 
 ## 1. Shape the domain types and state

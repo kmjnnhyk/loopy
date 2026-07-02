@@ -3,10 +3,6 @@ title: team()
 description: Agents as nodes, a shared transcript, and handoff sugar — the multi-agent primitive. A router picks the next single agent each turn.
 ---
 
-:::note[Branch status]
-`team()` is a **complete, type-verified** primitive, but as of this writing it lives on the `feat/team-type-surface` branch, not `master` — it hasn't merged yet. Every signature and example on this page is copied from that branch's `src/index.ts` and `examples/team.ts`, not invented. See [Status & Roadmap](/status-roadmap/) for the merge status, and [The team model, explained](/team-model/) for a guided walkthrough instead of a signature reference.
-:::
-
 `team()` is a thin, opinionated preset over the same graph machinery as [`workflow()`](/reference/workflow/): agents are the nodes, a shared `transcript` channel and a `nextAgent` control channel are auto-injected, and agents can request their own handoff via `passTo` in addition to (or instead of) an explicit `.router(...)`.
 
 ## Signature
@@ -78,7 +74,7 @@ export type TeamAutoState<Names extends string> = {
 
 Both answer "who goes next?" — the difference is **who decides**.
 
-- **`passTo`** (declared on [`agent()`](/reference/agent/#the-passto-extension-used-by-team)) — the *model* decides, because the decision requires actually reading the input (e.g. "is this a bug or a docs request?"). When the agent picks a target, it lands in `nextAgent`.
+- **`passTo`** (declared on [`agent()`](/reference/agent/#fields)) — the *model* decides, because the decision requires actually reading the input (e.g. "is this a bug or a docs request?"). When the agent picks a target, it lands in `nextAgent`.
 - **`.router(fn)`** — *your code* decides, because the rule is fixed (e.g. "if the review is approved, stop"). `fn` receives the full state snapshot, including `nextAgent`, and returns the next agent name or [`END`](/reference/channels/#end).
 
 They compose — a router typically checks `nextAgent` first, then falls back to its own rules:
@@ -129,7 +125,7 @@ This is deliberate — a single mapping is the common case ("give me the reviewe
 ## Full example — PR triage
 
 ```ts
-// examples/team.ts (feat/team-type-surface)
+// examples/team.ts
 export const triageState = {
   issue:  inputChannel<Issue>(),
   review: lastChannel<ReviewResult | null>(null),
@@ -171,7 +167,7 @@ const out: ReviewResult | null = await teamRt.run("prTriage", { issue: { id: 7, 
 
 ## Human-in-the-loop inside a team
 
-Because an `agent()` can't have an arbitrary body (its "body" *is* the model loop), a team that needs a human approval step routes it through a tool instead — `ToolCtx` on this branch carries `interrupt`:
+Because an `agent()` can't have an arbitrary body (its "body" *is* the model loop), a team that needs a human approval step routes it through a tool instead — `ToolCtx` carries `interrupt` for exactly this reason:
 
 ```ts
 export const requestApproval = tool({
@@ -189,4 +185,4 @@ See [Human-in-the-loop](/guides/human-in-the-loop/) for the full pattern.
 
 - [The team model, explained](/team-model/) — a guided, turn-by-turn walkthrough.
 - [Guides → A multi-agent team](/guides/multi-agent-team/)
-- [Status & Roadmap](/status-roadmap/) — the branch-merge status.
+- [Status & Roadmap](/status-roadmap/) — what still runs on stubs.

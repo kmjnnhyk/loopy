@@ -46,7 +46,7 @@ The channel this flows into is a named type across the whole workflow, not `unkn
 
 ## Inside a team: route it through a tool
 
-An `agent()` has no author-written body — its "body" *is* the model loop — so it can't call `ctx.interrupt` directly the way a `step()` can. Instead, a team that needs human approval gives an agent a tool whose `run` calls `interrupt`. On the `feat/team-type-surface` branch, `ToolCtx` carries `interrupt` for exactly this reason:
+An `agent()` has no author-written body — its "body" *is* the model loop — so it can't call `ctx.interrupt` directly the way a `step()` can. Instead, a team that needs human approval gives an agent a tool whose `run` calls `interrupt`. `ToolCtx` carries `interrupt` for exactly this reason:
 
 ```ts
 export const requestApproval = tool({

@@ -18,14 +18,16 @@ export interface Runtime<Reg> {
 export function defineLoopy<
   const A extends Record<string, AnyEntry>,
   const W extends Record<string, AnyEntry>,
+  const T extends Record<string, AnyEntry> = {},
 >(def: {
   agents: A;
   workflows: W & NoKeyCollision<A, W>;
-  deps: Pick<LoopyDeps, RequiredDeps<A & W>>;
-}): Runtime<A & W>;
+  teams?: T & NoKeyCollision<A & W, T>;
+  deps: Pick<LoopyDeps, RequiredDeps<A & W & T>>;
+}): Runtime<A & W & T>;
 ```
 
-`defineLoopy` takes every agent and workflow you want runnable, plus the concrete dependency instances they collectively need. `RequiredDeps<A & W>` is the union of every dependency any registered agent or workflow declares (directly or via their tools) — `deps` has to satisfy exactly that `Pick`, no more, no less. Omit one and the error names it:
+`defineLoopy` takes every agent, workflow, and [team](/reference/team/) you want runnable, plus the concrete dependency instances they collectively need. `teams` is optional — the examples below don't use it, since none of `examples/agents.ts`/`examples/workflows.ts` are teams; see [team() → registering a team](/reference/team/#registering-a-team) for a registry that does. `RequiredDeps<A & W & T>` is the union of every dependency anything registered declares (directly or via their tools) — `deps` has to satisfy exactly that `Pick`, no more, no less. Omit one and the error names it:
 
 ```ts
 // examples/_negative.ts — expect TS2741
@@ -37,7 +39,7 @@ export const badRuntime = defineLoopy({
 // → TS2741: Property 'shell' is missing in type '{...}' but required in type 'Pick<LoopyDeps, ...>'.
 ```
 
-`agents` and `workflows` can't share a key — `NoKeyCollision<A, W>` brands the `workflows` param with a compile error naming the collision, because `InputOf<Agent & Workflow>` would otherwise silently resolve to only one side.
+`agents` and `workflows` can't share a key — `NoKeyCollision<A, W>` brands the `workflows` param with a compile error naming the collision, because `InputOf<Agent & Workflow>` would otherwise silently resolve to only one side. `teams` is checked the same way against `agents & workflows` combined.
 
 ### Calling `run`
 
@@ -84,10 +86,6 @@ export const deferred = loopy({
 
 await deferred.run("designFlow", { message: "x" }); // only compiles after both .provide calls
 ```
-
-## `team()` in the registry
-
-On the `feat/team-type-surface` branch, `defineLoopy` additionally accepts a `teams` field, converging its dependency requirements into the same `RequiredDeps` union as `agents`/`workflows` — see [team()](/reference/team/#registering-a-team).
 
 ## Next
 

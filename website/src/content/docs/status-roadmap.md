@@ -7,15 +7,15 @@ loopy is being built **type-surface first**: the compile-time contract is locked
 
 ## What works today
 
-**The type surface** — `tool()`, `agent()`, `workflow()`, channels (`lastChannel`, `listChannel`), and the registry (`defineLoopy`, `loopy().provide(...)`) are real, exported, type-checked factories on `master`. Every claim made in [Core Concepts](/core-concepts/step/) and the [tool](/reference/tool/) / [agent](/reference/agent/) / [workflow](/reference/workflow/) reference pages is proven by:
+**The type surface** — `tool()`, `agent()`, `workflow()`, `team()`, channels (`lastChannel`, `listChannel`, `inputChannel`), and the registry (`defineLoopy`, `loopy().provide(...)`) are all real, exported, type-checked factories on `master`. Every claim made in [Core Concepts](/core-concepts/step/) and the [API Reference](/reference/) pages is proven by:
 
-- **Compile-assertions** (`examples/consumer.ts`) — `Expect<Equal<...>>` checks that specific inferred types come out exactly right (e.g. that a dependency union stays `"repo"` and doesn't widen to every dependency in the app).
-- **Must-error fixtures** (`examples/_negative.ts`) — mistakes that are *supposed* to fail a build, compiled separately, so the exact diagnostic (`TS2820`, `TS2741`, ...) is pinned down.
+- **Compile-assertions** (`examples/consumer.ts`, `examples/team-consumer.ts`) — `Expect<Equal<...>>` checks that specific inferred types come out exactly right (e.g. that a dependency union stays `"repo"` and doesn't widen to every dependency in the app, or that `team()`'s `passTo` membership guard actually rejects a stray handoff target).
+- **Must-error fixtures** (`examples/_negative.ts`) — mistakes that are *supposed* to fail a build, compiled separately, so the exact diagnostic (`TS2820`, `TS2741`, ...) is pinned down. `team()`'s slice alone covers five such fixtures.
 - **Hand-read `.d.ts` emit** under `isolatedDeclarations: true` — the package boundary itself was inspected, not just the source.
 
-What's *not* real yet: `run` bodies are stubs. `tool()`'s `run` executes exactly as you wrote it if you call it directly in a script, but nothing in loopy today drives an actual model loop, executes a workflow graph, or persists anything — see the next section.
+`team()` in particular went through its own completion gate — seven positive and five negative compile-assertions, plus a 10-agent scale check — before merging into `master`; see `examples/team.ts` for the anchor scenario (the same PR-triage example walked through in [The team model, explained](/team-model/)).
 
-**The `team()` multi-agent surface** — `team()`, `.writes()`/`.router()`, the `passTo` membership guard, the `inputChannel` brand, and the HITL `interrupt` extension to `ToolCtx` are complete and verified with the same discipline (a completion gate covering seven positive and five negative compile-assertions). As of this writing, this work lives on the `feat/team-type-surface` branch and has not yet merged into `master` — it's real, committed, and tested, just not yet on the default branch. Every `team()`-related page on this site ([API Reference](/reference/team/), [Guides](/guides/multi-agent-team/), [The team model](/team-model/)) says so explicitly and sources its code from that branch.
+**What's *not* real yet, for any of the above:** `run` bodies are stubs. `tool()`'s `run` executes exactly as you wrote it if you call it directly in a script, but nothing in loopy today drives an actual model loop, executes a workflow or team graph turn by turn, or persists anything — see the next section. This is true of `team()` too: the type surface (who's allowed to hand off to whom, what a router can return, how outputs land in channels) is fully checked; nothing yet actually runs a triage loop.
 
 ## What's designed but not built (the runtime)
 
@@ -32,15 +32,14 @@ The control loop, event-sourced replay, `passTo` consumption, and human-in-the-l
 - Parallel / concurrent agents (today, exactly one agent runs per team turn).
 - Nested teams (a team used as a node inside another team or workflow).
 - Typed error channels (a dedicated, typed failure path distinct from a thrown exception).
-- `loopy dev` — a local dev/debugging web UI — and a recorded-replay testing story both have design specs (`docs/superpowers/specs/2026-06-30-devtools-design.md`, `docs/superpowers/specs/2026-06-30-testing-design.md`) but no implementation plan yet.
+- `loopy dev` — a local dev/debugging web UI — and a recorded-replay testing story both have internal design specs but no implementation plan yet.
 - Cross-cutting middleware/observability (a way to wrap every `Step` with a shared concern) and the package/monorepo layout for eventual publishing haven't been designed at all.
 
 ## At a glance
 
 | Layer | State |
 |---|---|
-| `tool` / `agent` / `workflow` / registry type surface | ✅ done, on `master` |
-| `team` type surface | ✅ done, on `feat/team-type-surface` (pending merge) |
+| `tool` / `agent` / `workflow` / `team` / registry type surface | ✅ done, on `master` |
 | Control loop / event log / replay / resume | 🚧 designed, not implemented |
 | Schema-Aligned Parsing (real validation) | 🚧 designed, not implemented |
 | Parallel agents, nested teams, typed error channels | 🔭 not designed yet |

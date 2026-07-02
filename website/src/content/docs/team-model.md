@@ -3,11 +3,7 @@ title: "The team model, explained"
 description: A conceptual, no-jargon-first walkthrough of team() — channels, ReviewResult, passTo vs router, and a full turn-by-turn trace.
 ---
 
-This page explains the *ideas* behind [`team()`](/reference/team/), in plain language, before any type signature. It's adapted from the project's internal design note (`docs/design/team-explained.md`) for anyone who wants the mental model before the reference page. If you want to build one right now instead, see [Guide: a multi-agent team](/guides/multi-agent-team/).
-
-:::note[Branch status]
-Everything described here is implemented and type-verified on the `feat/team-type-surface` branch, not yet merged into `master`. See [Status & Roadmap](/status-roadmap/).
-:::
+This page explains the *ideas* behind [`team()`](/reference/team/), in plain language, before any type signature. It's adapted from the project's internal design notes for anyone who wants the mental model before the reference page. If you want to build one right now instead, see [Guide: a multi-agent team](/guides/multi-agent-team/).
 
 The concepts build on each other in this order: **channels → `ReviewResult` → `passTo` vs `.router()` → the rest of the code → the full run.**
 

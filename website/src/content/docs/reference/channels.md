@@ -51,8 +51,6 @@ export interface InputChannel<T> extends Channel<T, T> {
 export function inputChannel<T>(): InputChannel<T>;
 ```
 
-> This constructor lives on the `feat/team-type-surface` branch (implemented and type-verified, not yet merged into `master`) — see [Status & Roadmap](/status-roadmap/).
-
 Same overwrite semantics as `lastChannel`, but with no static `init` value — it's seeded by whatever input a [`team()`](/reference/team/) run is actually called with. It's branded with `"~input": true` so `TeamInputOf<State>` can pick these channels out of a team's `state` record to derive the run's input shape:
 
 ```ts

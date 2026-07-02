@@ -8,12 +8,14 @@ description: A model-owning think→act→observe loop. Carries tools (including
 ## Signature
 
 ```ts
-export interface Agent<Name, In, Out, Deps, Tools> extends Step<Name, In, Out, Deps> {
+export interface Agent<Name, In, Out, Deps, Tools, Pass extends string = never> extends Step<Name, In, Out, Deps> {
   readonly "~kind": "agent";
   readonly model: string;
   /** the concrete tool tuple is PRESERVED (not widened to AnyStep[]) so a
    *  consumer's `ToolDepKeys<typeof agent.tools>` stays precise across .d.ts. */
   readonly tools: Tools;
+  /** phantom: union of declared passTo target NAMES — see team(). */
+  readonly "~passTo"?: Pass;
   readonly run: (input: InferOut<In>, ctx: AgentCtx<Deps>) => Promise<InferOut<Out>>;
 }
 
@@ -23,6 +25,7 @@ export function agent<
   Out extends IO<any, any>,
   const Tools extends readonly AnyStep[] = [],
   const D extends readonly (keyof LoopyDeps)[] = [],
+  const Pass extends readonly string[] = [],
 >(def: {
   name: Name;
   model: string;
@@ -31,7 +34,8 @@ export function agent<
   output: Out;
   tools?: Tools & NoDuplicateTools<Tools>;
   deps?: D;
-}): Agent<Name, In, Out, D[number] | ToolDepKeys<Tools>, Tools>;
+  passTo?: Pass;
+}): Agent<Name, In, Out, D[number] | ToolDepKeys<Tools>, Tools, Pass[number]>;
 ```
 
 ## Fields
@@ -41,6 +45,7 @@ export function agent<
 - **`input` / `output`** — [`IO<...>`](/core-concepts/schemas/) schemas, same as `tool()`.
 - **`tools`** — an array of `Tool`s and/or other `Agent`s (see [The Step spine](/core-concepts/step/) for why an agent can be passed here). Defaults to `[]`. Duplicate tool names are a compile error via `NoDuplicateTools` — `tools: [editFile, editFile]` won't type-check.
 - **`deps`** — dependencies the agent needs *directly* (beyond whatever its tools already declare). The agent's effective dependency union is `deps[number] | ToolDepKeys<Tools>` — see [Dependency injection](/core-concepts/dependency-injection/).
+- **`passTo`** — used exclusively by [`team()`](/reference/team/); a plain, standalone agent never needs it. Declares the names of other agents *within the same team* this agent is allowed to hand off to — at compile time, every name is checked against actual team membership (see [team() → the passTo membership guard](/reference/team/#the-passto-membership-guard)).
 
 ## Example
 
@@ -58,24 +63,10 @@ export const codeGen = agent({
 });
 ```
 
-## The `passTo` extension (used by `team()`)
-
-On the `feat/team-type-surface` branch — implemented and type-verified, not yet merged into `master` — `agent()` accepts one more field, `passTo`, used exclusively by [`team()`](/reference/team/):
+## Example with `passTo`
 
 ```ts
-export function agent<
-  // ...
-  const Pass extends readonly string[] = [],
->(def: {
-  // ...same fields as above...
-  passTo?: Pass;
-}): Agent<Name, In, Out, D[number] | ToolDepKeys<Tools>, Tools, Pass[number]>;
-```
-
-`passTo` declares the names of other agents *within the same team* this agent is allowed to hand off to — at compile time, every name is checked against actual team membership (see [team() → the passTo membership guard](/reference/team/#the-passto-membership-guard)). It doesn't change what an agent looks like outside a team; a plain, standalone `agent()` never needs it.
-
-```ts
-// examples/team.ts (feat/team-type-surface)
+// examples/team.ts
 export const triage = agent({
   name: "triage", model: "opus",
   instructions: "Read the issue; hand to bugFixer or docsWriter.",
