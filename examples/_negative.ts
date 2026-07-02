@@ -1,6 +1,6 @@
 // MUST-error fixtures. Excluded from the positive build; compiled standalone via
 // tsconfig.negative.json to capture the exact diagnostic codes at the seam.
-import { workflow, io, lastChannel, defineLoopy, team, agent, inputChannel, END } from "loopy";
+import { workflow, io, lastChannel, defineLoopy, team, agent, inputChannel, node, step, END } from "loopy";
 import type { GitRepo, FigmaApi, JiraApi, VercelApi, GitCli, GitHubCli } from "./deps";
 import { fetchFigma } from "./tools";
 import { fileAnalyzer, codeGen, verifier, classifier, sufficiency } from "./agents";
@@ -9,13 +9,21 @@ import { bugFixer, docsWriter, reviewer } from "./team";
 import type { Issue, ReviewResult } from "./team";
 
 // ── negative ①: edge typo → expect TS2820 "Did you mean 'codeGen'?"
+// nodes wrapped in node(...reads) (Task 10 — bare steps now require the input to be
+// satisfiable by the full workflow view; wrapping keeps this fixture isolated to the
+// edge-typo diagnostics it documents, not an incidental BindingCheck failure).
 export const badFlow = workflow({
   name: "bad",
   state: { x: lastChannel<number>(0) },
   input: io<{ message: string }>(),
   output: io<{ done: boolean }>(),
 })
-  .nodes({ fetchFigma, fileAnalyzer, codeGen, verify: verifier })
+  .nodes({
+    fetchFigma: node(fetchFigma, { reads: (s) => ({ url: s.input.message }) }),
+    fileAnalyzer: node(fileAnalyzer, { reads: (s) => ({ goal: s.input.message }) }),
+    codeGen: node(codeGen, { reads: (s) => ({ task: s.input.message }) }),
+    verify: node(verifier, { reads: () => ({ diff: "" }) }),
+  })
   .flow((b) =>
     b
       .start("fetchFigma")
@@ -97,3 +105,35 @@ export const badChannelKey = team({
   state: { issue: inputChannel<Issue>(), review: lastChannel<ReviewResult | null>(null) },
   agents: { reviewer, bugFixer, docsWriter },
 }).writes({ reviewer: "revie" }); // channel typo
+
+/* ── workflow node-binding must-error fixtures (Task 10) ─────────────────── */
+
+const buildFixture = step({
+  name: "bf",
+  input: io<{ p: string }>(),
+  output: io<{ ok: boolean; log: string }>(),
+  run: async () => ({ ok: true, log: "" }),
+});
+
+// N-wf1: writes names a channel that isn't in state → "~writesUnknownChannel" brand
+// (workflow() split into its own statement — @ts-expect-error only covers the line
+// immediately following it, and the .nodes() argument is where the error surfaces.)
+const nwf1Base = workflow({
+  name: "nwf1",
+  state: { a: lastChannel<number>(0) },
+  input: io<{ x: number }>(),
+  output: io<{ y: number }>(),
+});
+// @ts-expect-error — writes: "nope" is not a channel of nwf1's state
+export const badWfChannel = nwf1Base.nodes({ b: node(buildFixture, { reads: () => ({ p: "" }), writes: "nope" }) });
+
+// N-wf2: node output not assignable to the channel's value type →
+// "~nodeOutputNotAssignableToChannel" brand
+const nwf2Base = workflow({
+  name: "nwf2",
+  state: { a: lastChannel<number>(0) },
+  input: io<{ x: number }>(),
+  output: io<{ y: number }>(),
+});
+// @ts-expect-error — {ok:boolean;log:string} is not assignable to channel a: number
+export const badWfOutput = nwf2Base.nodes({ b: node(buildFixture, { reads: () => ({ p: "" }), writes: "a" }) });

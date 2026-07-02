@@ -90,6 +90,8 @@ export interface Step<
   readonly output: Out;
   /** phantom dep-key union — the extraction target for ToolDepKeys / DepsOf. */
   readonly "~deps"?: Deps;
+  /** runtime dep-key array capture (Task 10) — consumed by the interpreter's ctx slicing. */
+  readonly "~depKeys"?: readonly string[];
   // FIX ① (completed): BOTH slots are `any`, not just the schema-derived input.
   // `ctx: unknown` would re-introduce the contravariant failure — top-type
   // `unknown` is not assignable to a concrete `ToolCtx<…>` in param position, so
@@ -138,6 +140,7 @@ export function tool<
     input: def.input,
     output: def.output,
     idempotencyKey: def.idempotencyKey,
+    "~depKeys": def.deps ?? [],
     run: def.run,
   } as Tool<Name, In, Out, D[number]>;
 }
@@ -176,11 +179,16 @@ export interface Agent<
 > extends Step<Name, In, Out, Deps> {
   readonly "~kind": "agent";
   readonly model: string;
+  readonly instructions: string;
+  readonly maxSteps?: number;
+  readonly parseRetries?: number;
   /** the concrete tool tuple is PRESERVED (not widened to AnyStep[]) so a
    *  consumer's `ToolDepKeys<typeof agent.tools>` stays precise across .d.ts. */
   readonly tools: Tools;
   /** phantom: union of declared passTo target NAMES (§6 candidate ii). */
   readonly "~passTo"?: Pass;
+  /** runtime passTo-name array capture (Task 10) — consumed by the interpreter. */
+  readonly "~passToNames"?: readonly string[];
   readonly run: (input: InferOut<In>, ctx: AgentCtx<Deps>) => Promise<InferOut<Out>>;
 }
 
@@ -200,14 +208,21 @@ export function agent<
   tools?: Tools & NoDuplicateTools<Tools>;
   deps?: D;
   passTo?: Pass;
+  maxSteps?: number;
+  parseRetries?: number;
 }): Agent<Name, In, Out, D[number] | ToolDepKeys<Tools>, Tools, Pass[number]> {
   return {
     "~kind": "agent",
     name: def.name,
     model: def.model,
+    instructions: def.instructions,
+    maxSteps: def.maxSteps,
+    parseRetries: def.parseRetries,
     input: def.input,
     output: def.output,
     tools: (def.tools ?? []) as Tools,
+    "~depKeys": def.deps ?? [],
+    "~passToNames": def.passTo ?? [],
     run: undefined as never,
   } as Agent<Name, In, Out, D[number] | ToolDepKeys<Tools>, Tools, Pass[number]>;
 }
@@ -273,6 +288,44 @@ export type TeamInputOf<State> = {
 export const END: "~end" = "~end";
 export type END = typeof END;
 
+/* ── workflow node binding (runtime spec §5 — additive) ───────────────────── */
+
+export interface NodeBinding<St extends AnyStep, W extends string = never> {
+  readonly "~binding": true;
+  readonly step: St;
+  /** state view → node input. v1 leak: source param is `any`; the RETURN is checked. */
+  readonly reads?: (s: any) => InferOut<St["input"]>;
+  readonly writes?: W;
+}
+
+export function node<St extends AnyStep, const W extends string = never>(
+  step: St,
+  binding: { reads?: (s: any) => InferOut<St["input"]>; writes?: W } = {},
+): NodeBinding<St, W> {
+  return { "~binding": true, step, reads: binding.reads, writes: binding.writes };
+}
+
+/** run-input auto channel: every node's reads/router sees `s.input`. */
+export type WorkflowView<State, In extends IO<any, any>> = StateOf<State> & { readonly input: InferOut<In> };
+
+/** per-slot guard: writes must name an existing channel AND output ⊑ channel value;
+ *  a bare Step (no binding) is allowed only when the full state view satisfies its input. */
+export type BindingCheck<State, In extends IO<any, any>, N> = {
+  [K in keyof N]: N[K] extends NodeBinding<infer St, infer W>
+    ? [W] extends [never]
+      ? N[K]
+      : W extends keyof State
+        ? [InferOut<St["output"]>] extends [ChannelValueOf<State[W]>]
+          ? N[K]
+          : { readonly "~nodeOutputNotAssignableToChannel": { readonly node: K; readonly channel: W } }
+        : { readonly "~writesUnknownChannel": W }
+    : N[K] extends AnyStep
+      ? [WorkflowView<State, In>] extends [InferOut<N[K]["input"]>]
+        ? N[K]
+        : { readonly "~nodeNeedsReads": K }
+      : N[K];
+};
+
 /** A workflow node = any Step (tool / agent / inline step). */
 export function step<
   const Name extends string,
@@ -286,12 +339,13 @@ export function step<
   deps?: D;
   run: (input: InferOut<In>, ctx: NodeCtx<D[number]>) => Promise<InferOut<Out>>;
 }): Step<Name, In, Out, D[number]> {
-  return { name: def.name, input: def.input, output: def.output, run: def.run as never } as Step<
-    Name,
-    In,
-    Out,
-    D[number]
-  >;
+  return {
+    name: def.name,
+    input: def.input,
+    output: def.output,
+    "~depKeys": def.deps ?? [],
+    run: def.run as never,
+  } as Step<Name, In, Out, D[number]>;
 }
 
 export interface Workflow<
@@ -307,6 +361,8 @@ export interface Workflow<
   readonly input: In;
   readonly output: Out;
   readonly "~deps"?: Deps;
+  /** runtime graph capture (Task 10); type narrowed in the runtime module. */
+  readonly "~graph"?: unknown;
 }
 
 /** dep-union accumulated from every node in the workflow. */
@@ -321,23 +377,50 @@ export interface FlowBuilder<S, NodeName extends string> {
   branch(from: NodeName, router: (s: S) => NodeName | END): FlowBuilder<S, NodeName>;
 }
 
-export interface WorkflowNodes<
-  Name extends string,
-  State,
-  In extends IO<any, any>,
-  Out extends IO<any, any>,
-  NodeName extends string,
-  Deps extends keyof LoopyDeps,
-> {
-  flow(
-    build: (b: FlowBuilder<StateOf<State>, NodeName>) => FlowBuilder<StateOf<State>, NodeName>,
-  ): Workflow<Name, State, In, Out, Deps>;
+export interface WorkflowFlowed<
+  Name extends string, State, In extends IO<any, any>, Out extends IO<any, any>, Deps extends keyof LoopyDeps,
+> extends Workflow<Name, State, In, Out, Deps> {
+  returns(fn: (s: WorkflowView<State, In>) => InferOut<Out>): Workflow<Name, State, In, Out, Deps>;
 }
 
+export interface WorkflowNodes<
+  Name extends string, State, In extends IO<any, any>, Out extends IO<any, any>,
+  NodeName extends string, Deps extends keyof LoopyDeps,
+> {
+  flow(
+    build: (b: FlowBuilder<WorkflowView<State, In>, NodeName>) => FlowBuilder<WorkflowView<State, In>, NodeName>,
+  ): WorkflowFlowed<Name, State, In, Out, Deps>;
+}
+
+/** node 값에서 dep-키 추출 시 바인딩을 투과 (NodeDepKeys에 바인딩 언랩 추가). */
+export type UnwrapBinding<E> = E extends NodeBinding<infer St, any> ? St : E;
+
 export interface WorkflowInit<Name extends string, State, In extends IO<any, any>, Out extends IO<any, any>> {
-  nodes<const Nodes extends Record<string, AnyStep>>(
-    nodes: Nodes,
-  ): WorkflowNodes<Name, State, In, Out, Extract<keyof Nodes, string>, NodeDepKeys<Nodes>>;
+  // NOTE (deviation from brief): the constraint is `Record<string, unknown>`, not
+  // `Record<string, AnyStep | NodeBinding<AnyStep, string>>` as the brief specifies.
+  // With the tighter bound, TS's contextual instantiation feeds `NodeBinding<AnyStep,
+  // string>`'s `W = string` into each nested `node(...)` call as an inference candidate
+  // BEFORE the call's own (absent) `writes` argument is considered — an omitted `writes`
+  // then infers `W = string` instead of the documented default `never` (verified via an
+  // isolated repro; a bare `Record<string, unknown>` bound removes the leaking candidate
+  // and restores `W = never` for bare `node(step, { reads })` calls). Validation strength
+  // is otherwise unchanged: BindingCheck below still fully checks every entry that IS a
+  // NodeBinding or AnyStep; only a non-Step, non-binding garbage value (not exercised by
+  // any example or negative fixture) would no longer be rejected at this constraint.
+  nodes<const Nodes extends Record<string, unknown>>(
+    nodes: Nodes & BindingCheck<State, In, Nodes>,
+  ): WorkflowNodes<
+    Name, State, In, Out, Extract<keyof Nodes, string>,
+    NodeDepKeys<{ [K in keyof Nodes]: UnwrapBinding<Nodes[K]> }>
+  >;
+}
+
+interface WorkflowGraphCapture {
+  nodes: Record<string, { step: unknown; reads?: (s: unknown) => unknown; writes?: string }>;
+  start: string;
+  edges: Record<string, string>;
+  branches: Record<string, (s: unknown) => string>;
+  returns: ((s: unknown) => unknown) | null;
 }
 
 export function workflow<
@@ -346,10 +429,32 @@ export function workflow<
   In extends IO<any, any>,
   Out extends IO<any, any>,
 >(def: { name: Name; state: State; input: In; output: Out }): WorkflowInit<Name, State, In, Out> {
-  void def;
   return {
-    nodes: (() => ({ flow: () => undefined as never })) as never,
-  } as WorkflowInit<Name, State, In, Out>;
+    nodes(rawNodes: Record<string, unknown>) {
+      const graph: WorkflowGraphCapture = { nodes: {}, start: "", edges: {}, branches: {}, returns: null };
+      for (const [k, v] of Object.entries(rawNodes)) {
+        const b = v as { "~binding"?: true; step?: unknown; reads?: (s: unknown) => unknown; writes?: string };
+        graph.nodes[k] = b["~binding"] ? { step: b.step, reads: b.reads, writes: b.writes } : { step: v };
+      }
+      const flowApi = {
+        start(n: string) { graph.start = n; return flowApi; },
+        edge(f: string, t: string) { graph.edges[f] = t; return flowApi; },
+        branch(f: string, r: (s: unknown) => string) { graph.branches[f] = r; return flowApi; },
+      };
+      return {
+        flow(build: (b: never) => unknown) {
+          build(flowApi as never);
+          const wf = {
+            "~kind": "workflow" as const,
+            name: def.name, state: def.state, input: def.input, output: def.output,
+            "~graph": graph,
+            returns(fn: (s: unknown) => unknown) { graph.returns = fn; return wf; },
+          };
+          return wf;
+        },
+      };
+    },
+  } as unknown as WorkflowInit<Name, State, In, Out>;
 }
 
 /* ============================================================================

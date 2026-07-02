@@ -1,11 +1,9 @@
-// 2 workflows — two-phase .nodes().flow(). designFlow has build↔codeGen and
-// verify↔codeGen cycles (router typing). jiraFlow has 2 interrupts (HITL).
-import { workflow, step, io, lastChannel, END } from "loopy";
+// 2 workflows — node() bindings + .returns() (runtime spec §5). jiraFlow: interrupt 2x.
+import { workflow, step, node, io, lastChannel, END } from "loopy";
 import { fetchFigma, getIssue, openPR, waitForDeploy } from "./tools";
 import { fileAnalyzer, codeGen, verifier, sufficiency } from "./agents";
-import type { FigmaData, DeployResult } from "./deps";
+import type { FigmaData, DeployResult, JiraIssue } from "./deps";
 
-// HITL payload types — named so they must survive .d.ts emit as channel values.
 export interface UserClarification {
   readonly answers: readonly string[];
   readonly by: string;
@@ -15,7 +13,6 @@ export interface BaseBranchChoice {
   readonly confirmedBy: string;
 }
 
-// ── inline workflow nodes (deps declared) ──────────────────────────────────
 const build = step({
   name: "build",
   input: io<{ paths: readonly string[] }>(),
@@ -42,26 +39,37 @@ export const designFlow = workflow({
   name: "designFlow",
   state: {
     figma: lastChannel<FigmaData | null>(null),
-    build: lastChannel<{ ok: boolean } | null>(null),
+    paths: lastChannel<{ paths: readonly string[] } | null>(null),
+    gen: lastChannel<{ applied: readonly string[]; failed: readonly string[] } | null>(null),
+    build: lastChannel<{ ok: boolean; log: string } | null>(null),
+    verify: lastChannel<{ passed: boolean; notes: string } | null>(null),
     deploy: lastChannel<DeployResult | null>(null),
   },
   input: io<{ message: string }>(),
   output: io<{ prUrl: string }>(),
 })
-  .nodes({ fetchFigma, fileAnalyzer, codeGen, build, verify: verifier, push, deploy: waitForDeploy })
+  .nodes({
+    fetchFigma: node(fetchFigma, { reads: (s) => ({ url: s.input.message }), writes: "figma" }),
+    fileAnalyzer: node(fileAnalyzer, { reads: (s) => ({ goal: s.input.message }), writes: "paths" }),
+    codeGen: node(codeGen, { reads: (s) => ({ task: s.input.message }), writes: "gen" }),
+    build: node(build, { reads: (s) => ({ paths: s.paths?.paths ?? [] }), writes: "build" }),
+    verify: node(verifier, { reads: (s) => ({ diff: (s.gen?.applied ?? []).join(",") }), writes: "verify" }),
+    push: node(push, { reads: (s) => ({ sha: s.gen?.applied[0] ?? "HEAD" }) }),
+    deploy: node(waitForDeploy, { reads: () => ({ since: 0 }), writes: "deploy" }),
+  })
   .flow((b) =>
     b
       .start("fetchFigma")
       .edge("fetchFigma", "fileAnalyzer")
       .edge("fileAnalyzer", "codeGen")
       .edge("codeGen", "build")
-      .branch("build", (s) => (s.build?.ok ? "verify" : "codeGen")) // build↔codeGen cycle
-      .branch("verify", (s) => (s.figma ? "push" : "codeGen")) // verify↔codeGen cycle
+      .branch("build", (s) => (s.build?.ok ? "verify" : "codeGen"))
+      .branch("verify", (s) => (s.verify?.passed ? "push" : "codeGen"))
       .edge("push", "deploy")
       .edge("deploy", END),
-  );
+  )
+  .returns((s) => ({ prUrl: s.deploy?.url ?? "" }));
 
-// ── jiraFlow: 2 interrupts (needsInput, awaitBase) ─────────────────────────
 const preprocess = step({
   name: "preprocess",
   input: io<{ issue: string }>(),
@@ -72,11 +80,8 @@ const preprocess = step({
 const needsInput = step({
   name: "needsInput",
   input: io<{ missing: readonly string[] }>(),
-  output: io<{ clarified: UserClarification }>(),
-  run: async (_i, ctx) => {
-    const clarified = await ctx.interrupt<UserClarification>({ kind: "clarify" }); // interrupt #1
-    return { clarified };
-  },
+  output: io<UserClarification>(),
+  run: async (_i, ctx) => ctx.interrupt<UserClarification>({ kind: "clarify" }),
 });
 
 const implement = step({
@@ -90,33 +95,47 @@ const implement = step({
 const awaitBase = step({
   name: "awaitBase",
   input: io<{ branch: string }>(),
-  output: io<{ chosen: BaseBranchChoice }>(),
-  run: async (_i, ctx) => {
-    const chosen = await ctx.interrupt<BaseBranchChoice>({ kind: "pick-base" }); // interrupt #2
-    return { chosen };
-  },
+  output: io<BaseBranchChoice>(),
+  run: async (_i, ctx) => ctx.interrupt<BaseBranchChoice>({ kind: "pick-base" }),
 });
 
 export const jiraFlow = workflow({
   name: "jiraFlow",
   state: {
-    verdict: lastChannel<"sufficient" | "partial" | "insufficient" | null>(null),
+    issue: lastChannel<JiraIssue | null>(null),
+    sufficiency: lastChannel<{ verdict: "sufficient" | "partial" | "insufficient"; missing: readonly string[] } | null>(null),
     clarification: lastChannel<UserClarification | null>(null),
+    impl: lastChannel<{ committed: boolean; sha: string | null } | null>(null),
     baseBranch: lastChannel<BaseBranchChoice | null>(null),
-    prUrl: lastChannel<string | null>(null),
+    // deviation from brief: openPR's tool output is `{ url: string }` (examples/tools.ts,
+    // out of scope for this task), not `string` — the channel value must match the tool's
+    // actual output shape or the writes-side BindingCheck rejects the binding.
+    pr: lastChannel<{ url: string } | null>(null),
   },
   input: io<{ issueKey: string }>(),
   output: io<{ prUrl: string }>(),
 })
-  .nodes({ gate: getIssue, preprocess, sufficiency, needsInput, implement, awaitBase, openPR })
+  .nodes({
+    gate: node(getIssue, { reads: (s) => ({ key: s.input.issueKey }), writes: "issue" }),
+    preprocess: node(preprocess, { reads: (s) => ({ issue: s.issue?.description ?? "" }) }),
+    sufficiency: node(sufficiency, { reads: (s) => ({ issue: s.issue?.description ?? "" }), writes: "sufficiency" }),
+    needsInput: node(needsInput, { reads: (s) => ({ missing: s.sufficiency?.missing ?? [] }), writes: "clarification" }),
+    implement: node(implement, { reads: (s) => ({ task: s.issue?.summary ?? "" }), writes: "impl" }),
+    awaitBase: node(awaitBase, { reads: () => ({ branch: "main" }), writes: "baseBranch" }),
+    openPR: node(openPR, {
+      reads: (s) => ({ head: s.impl?.sha ?? "", base: s.baseBranch?.baseBranch ?? "", title: s.issue?.summary ?? "" }),
+      writes: "pr",
+    }),
+  })
   .flow((b) =>
     b
       .start("gate")
       .edge("gate", "preprocess")
       .edge("preprocess", "sufficiency")
-      .branch("sufficiency", (s) => (s.verdict === "insufficient" ? "needsInput" : "implement"))
+      .branch("sufficiency", (s) => (s.sufficiency?.verdict === "insufficient" ? "needsInput" : "implement"))
       .edge("needsInput", "implement")
       .edge("implement", "awaitBase")
       .branch("awaitBase", (s) => (s.baseBranch ? "openPR" : "awaitBase"))
       .edge("openPR", END),
-  );
+  )
+  .returns((s) => ({ prUrl: s.pr?.url ?? "" }));
