@@ -15,6 +15,16 @@ describe("digest", () => {
     expect(digest({ x: 1 })).toBe(digest({ x: 1 }));
     expect(digest({ x: 1 })).not.toBe(digest({ x: 2 }));
   });
+  test("Date is value-sensitive, not collapsed to {}", () => {
+    const a = new Date("2026-01-01T00:00:00.000Z");
+    const b = new Date("2026-01-02T00:00:00.000Z");
+    expect(digest({ at: a })).not.toBe(digest({ at: b }));
+    expect(digest({ at: a })).toBe(digest({ at: new Date("2026-01-01T00:00:00.000Z") }));
+  });
+  test("bigint does not throw and is value-sensitive", () => {
+    expect(() => digest({ big: 10n })).not.toThrow();
+    expect(digest({ big: 10n })).not.toBe(digest({ big: 11n }));
+  });
 });
 
 test("posKey encodes scope/ordinal/op", () => {

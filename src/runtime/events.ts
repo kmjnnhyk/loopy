@@ -53,8 +53,11 @@ type DistOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
 /** what callers hand to EventSession.write — base fields are filled in by the session */
 export type EventBody = DistOmit<Event, "seq" | "threadId" | "runId" | "ts">;
 
+/** Limitation: Map/Set/class instances are walked by own enumerable keys only. */
 export function stableStringify(v: unknown): string {
+  if (typeof v === "bigint") return `"${v}n"`;
   if (v === null || typeof v !== "object") return JSON.stringify(v) ?? "undefined";
+  if (v instanceof Date) return JSON.stringify(v.toISOString());
   if (Array.isArray(v)) return `[${v.map(stableStringify).join(",")}]`;
   const o = v as Record<string, unknown>;
   const keys = Object.keys(o).sort();
