@@ -4,12 +4,12 @@ description: React for agents — a type-safe TypeScript DSL for LLM agents, too
 template: splash
 banner:
   content: |
-    loopy is a prototype — the type surface is complete and compile-checked, the runtime is not yet implemented. See <a href="/status-roadmap/">Status &amp; Roadmap</a>.
+    loopy is a prototype — the type surface is complete and compile-checked, the runtime is not yet implemented. See <a href="status-roadmap/">Status &amp; Roadmap</a>.
 hero:
   tagline: '<strong>React for agents.</strong> A type-safe TypeScript DSL for LLM agents, tools, workflows, and teams — everything reduces to one primitive, a <code>Step</code>.'
   actions:
     - text: Get Started
-      link: /getting-started/
+      link: /loopy/getting-started/
       icon: right-arrow
     - text: View on GitHub
       link: https://github.com/kmjnnhyk/loopy
@@ -77,7 +77,7 @@ const rt = defineLoopy({ agents: {}, workflows: {}, teams: { prTriage }, deps: {
 const out: ReviewResult | null = await rt.run("prTriage", { issue });
 ```
 
-*(`triage`, `docsWriter`, `reviewer`, `Issue`, and `ReviewResult` are elided above for brevity — see [the team model, explained](/team-model/) for the full, runnable version.)*
+*(`triage`, `docsWriter`, `reviewer`, `Issue`, and `ReviewResult` are elided above for brevity — see [the team model, explained](team-model/) for the full, runnable version.)*
 
 ## Why loopy
 
@@ -89,18 +89,18 @@ const out: ReviewResult | null = await rt.run("prTriage", { issue });
 <CardGrid>
 	<Card title="Getting Started" icon="rocket">
 		Clone the repo and explore the type surface with `tsc` — no install, no npm package yet.
-		[Read the guide →](/getting-started/)
+		[Read the guide →](getting-started/)
 	</Card>
 	<Card title="Core Concepts" icon="puzzle">
 		Everything is a `Step`. Learn the spine, schemas, dependency injection, channels, and event sourcing.
-		[Start with the Step spine →](/core-concepts/step/)
+		[Start with the Step spine →](core-concepts/step/)
 	</Card>
 	<Card title="API Reference" icon="document">
 		`tool()`, `agent()`, `workflow()`, `team()`, channels, and the registry — one page per primitive.
-		[Browse the reference →](/reference/)
+		[Browse the reference →](reference/)
 	</Card>
 	<Card title="The team model" icon="comment">
 		Multi-agent teams, explained end to end with a PR-triage walkthrough.
-		[Read the deep dive →](/team-model/)
+		[Read the deep dive →](team-model/)
 	</Card>
 </CardGrid>
