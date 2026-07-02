@@ -3,7 +3,7 @@ import { defineLoopy, stubModel, memoryStore, END } from "loopy";
 import { verifyReplay } from "../../src/runtime/verify";
 import { workflowDriver } from "../../src/runtime/drivers/workflow";
 import { agentNode } from "../../src/runtime/drivers/agent";
-import { runThread, type Driver, type RunnableNode } from "../../src/runtime/scheduler";
+import { runThread, RunSuspended, type Driver, type RunnableNode } from "../../src/runtime/scheduler";
 import { rawChannel } from "../../src/runtime/channels";
 import { designFlow } from "../../examples/workflows";
 import { classifier, sufficiency, fileAnalyzer, verifier, codeGen } from "../../examples/agents";
@@ -64,4 +64,42 @@ test("verifyReplay: 삼켜진 Suspend(미해소 InterruptRaised + RunEnded) → 
   const out = await runThread({ driver, store, threadId: "sw1", entry: "toy", input: { n: 1 } });
   expect(out).toEqual({ done: false }); // 스레드는 "완주"했지만
   await expect(verifyReplay(store, "sw1", driver)).rejects.toThrow(/unresolved interrupt/);
+});
+
+test("verifyReplay: 정상 HITL 완주(도구 내 interrupt→resume) → green", async () => {
+  // suspend-mid-tool은 설계상 ToolReturned 없는 ToolCalled를 남기고, resume 때 같은
+  // posKey·새 effectId로 재발행됨 — verifyReplay가 이걸 dangling으로 오탐하면 안 된다.
+  const gate = {
+    name: "gate",
+    run: async (_i: unknown, tctx: { interrupt<T>(p: unknown): Promise<T> }) => {
+      const ok = await tctx.interrupt<{ approved: boolean }>({ ask: "ok?" });
+      return { approved: ok.approved };
+    },
+  };
+  const node: RunnableNode = {
+    reads: () => null,
+    run: async (_i, ctx) => ctx.callTool(gate as never, { q: 1 }),
+  };
+  const driver: Driver = {
+    channels: { input: rawChannel(), only: rawChannel() },
+    seed: (input) => ({ input }),
+    next: (_s, last) => (last === null ? "only" : END),
+    onSelected: () => null,
+    node: () => node,
+    updatesFor: (name, output) => ({ [name]: output }),
+    output: (s) => s.only,
+    guard: () => {},
+  };
+  const store = memoryStore();
+  await expect(runThread({ driver, store, threadId: "hitl1", entry: "toy", input: { n: 1 } }))
+    .rejects.toThrow(RunSuspended);
+  const out = await runThread({ driver, store, threadId: "hitl1", entry: "toy", resume: { value: { approved: true } } });
+  expect(out).toEqual({ approved: true });
+
+  const log = await store.readLog(threadId("hitl1"));
+  // 오탐 조건이 진짜 재현됐음을 증명: dangling-by-design 원본 + 재발행 = ToolCalled 2개
+  expect(log.filter((e) => e.type === "ToolCalled").length).toBe(2);
+
+  const { output } = await verifyReplay(store, "hitl1", driver); // throw하지 않고 resolve
+  expect(output).toEqual({ approved: true });
 });

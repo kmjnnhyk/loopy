@@ -20,11 +20,20 @@ export async function verifyReplay(
   // resumedKeys 체크는 구조적으로 작동 불가 — 먼저 전체 로그의 resumeKey를 수집.
   const resumedKeys = new Set<string>();
   for (const e of events) if (e.type === "Resumed") resumedKeys.add(e.resumeKey);
-  const open = new Map<number, string>();
+  // open 맵은 posKey 키 — suspend-mid-tool은 설계상 ToolReturned 없는 ToolCalled를 남기고
+  // resume 때 같은 posKey·새 effectId로 재발행되므로(Memo.fromEvents의 키잉과 동형),
+  // effectId 키는 정상 HITL 완주 로그를 dangling으로 오탐한다. 같은 posKey 재발행은
+  // set이 선행 dangling을 자연히 대체하고, Returned는 effectId→posKey 역참조로 닫는다.
+  const open = new Map<string, string>();
+  const posByEffectId = new Map<number, string>();
   for (const e of events) {
-    if (e.type === "ToolCalled" || e.type === "ModelCallRequested" || e.type === "SleepScheduled") open.set(e.effectId, e.posKey);
-    else if (e.type === "ToolReturned" || e.type === "ModelCallReturned" || e.type === "TimerFired") open.delete(e.effectId);
-    else if (e.type === "InterruptRaised" && !resumedKeys.has(e.resumeKey)) {
+    if (e.type === "ToolCalled" || e.type === "ModelCallRequested" || e.type === "SleepScheduled") {
+      posByEffectId.set(e.effectId, e.posKey);
+      open.set(e.posKey, e.posKey);
+    } else if (e.type === "ToolReturned" || e.type === "ModelCallReturned" || e.type === "TimerFired") {
+      const pos = posByEffectId.get(e.effectId);
+      if (pos !== undefined) open.delete(pos);
+    } else if (e.type === "InterruptRaised" && !resumedKeys.has(e.resumeKey)) {
       // Suspend 삼킴 = 작성자 임퓨리티 시그널 (RunEnded와 미해소 interrupt 공존)
       throw new Error(
         `verifyReplay("${threadIdValue}"): unresolved interrupt at ${e.resumeKey} — a Suspend was swallowed by author code`,
