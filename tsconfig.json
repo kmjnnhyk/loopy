@@ -4,6 +4,7 @@
     "module": "Preserve",
     "moduleResolution": "Bundler",
     "lib": ["ESNext"],
+    "types": ["bun"],
 
     "strict": true,
     "isolatedDeclarations": true,
