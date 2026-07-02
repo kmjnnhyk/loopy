@@ -26,4 +26,13 @@ describe("parseStructured", () => {
       expect((e as ParseError).raw).toBe("I refuse.");
     }
   });
+  test("stray brace in prose before the payload is skipped (backtrack)", () => {
+    expect(parseStructured(schema, 'The schema uses { for objects. Answer: {"verdict":"ok","n":5}')).toEqual({ verdict: "ok", n: 5 });
+  });
+  test("comma repair is string-safe: literal ,} inside a string survives", () => {
+    expect(parseStructured(schema, '{"verdict":"x,}","n":6,}')).toEqual({ verdict: "x,}", n: 6 });
+  });
+  test("scanner is string-safe: braces/brackets inside string values", () => {
+    expect(parseStructured(schema, '{"verdict":"has { and ] inside","n":7}')).toEqual({ verdict: "has { and ] inside", n: 7 });
+  });
 });
