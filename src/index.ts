@@ -7,6 +7,21 @@
 // return type so `isolatedDeclarations: true` passes and the emitted .d.ts keeps
 // the synthetic type *names* (no anonymous blobs). Internal const tables may use
 // `satisfies`; exported factory returns never do.
+//
+// ESM cycle note (Task 13): runtime/* modules import VALUES from this module
+// (END, lastChannel, …) and this module imports runtime VALUES back — a genuine
+// ESM cycle. Safe because both sides only ACCESS the cross-module values inside
+// function bodies (driver factories, defineLoopy/loopy call time), never at
+// module top-level evaluation. Type-only imports are unaffected either way.
+
+import { runThread as _runThread, RunSuspended } from "./runtime/scheduler";
+import { workflowDriver } from "./runtime/drivers/workflow";
+import { agentDriver, agentNode, AgentMaxStepsError } from "./runtime/drivers/agent";
+import { memoryStore } from "./runtime/store";
+import type { Checkpointer } from "./runtime/store";
+import type { ModelClient } from "./runtime/model";
+import type { Event as RuntimeEvent } from "./runtime/events";
+import type { Driver } from "./runtime/scheduler";
 
 /* ============================================================================
  * §0 — Dependency registry (augmentable) + capability contexts
@@ -488,13 +503,24 @@ export type NoKeyCollision<A, W> = keyof A & keyof W extends never
   ? unknown
   : { readonly "~duplicateRegistryKey": keyof A & keyof W };
 
+export interface RunOpts {
+  readonly threadId?: string;
+}
+
 export type RunFn<Reg> = <Name extends keyof Reg>(
   name: Name,
   input: InputOf<Reg[Name]>,
+  opts?: RunOpts,
 ) => Promise<OutputOf<Reg[Name]>>;
 
 export interface Runtime<Reg> {
   readonly run: RunFn<Reg>;
+  resume(threadIdValue: string, value: unknown): Promise<unknown>;
+}
+
+interface RegEntry {
+  readonly kind: "agent" | "workflow" | "team";
+  readonly value: unknown;
 }
 
 /** deps fully supplied here → directly runnable. (negative②: a missing dep
@@ -510,9 +536,44 @@ export function defineLoopy<
   workflows: W & NoKeyCollision<A, W>;
   teams?: T & NoKeyCollision<A & W, T>;
   deps: Pick<LoopyDeps, RequiredDeps<A & W & T>>;
+  models?: Record<string, ModelClient>;
+  store?: Checkpointer;
+  onEvent?: (e: RuntimeEvent) => void;
 }): Runtime<A & W & T> {
-  void def;
-  return { run: (async () => undefined as never) as RunFn<A & W & T> };
+  const store = def.store ?? memoryStore();
+  const registry = new Map<string, RegEntry>();
+  for (const [k, v] of Object.entries(def.agents)) registry.set(k, { kind: "agent", value: v });
+  for (const [k, v] of Object.entries(def.workflows)) registry.set(k, { kind: "workflow", value: v });
+  for (const [k, v] of Object.entries(def.teams ?? {})) registry.set(k, { kind: "team", value: v });
+  let counter = 0;
+
+  const driverFor = (name: string): { driver: Driver; kind: RegEntry["kind"] } => {
+    const e = registry.get(name);
+    if (!e) throw new Error(`defineLoopy: unknown entry "${name}"`);
+    if (e.kind === "agent") return { driver: agentDriver(e.value as never), kind: e.kind };
+    if (e.kind === "workflow") return { driver: workflowDriver(e.value as never, agentNode as never), kind: e.kind };
+    throw new Error(`team runtime lands in Task 14 — entry "${name}"`); // Task 14가 teamDriver로 교체
+  };
+
+  const exec = async (name: string, input: unknown, opts?: RunOpts, resume?: { value: unknown }): Promise<unknown> => {
+    const { driver, kind } = driverFor(name);
+    const out = await _runThread({
+      driver, store, threadId: opts?.threadId ?? `${name}#${counter++}`, entry: name,
+      deps: def.deps as Record<string, unknown>, models: def.models ?? {}, onEvent: def.onEvent,
+      input, resume,
+    });
+    return kind === "agent" ? (out as { output: unknown }).output : out;
+  };
+
+  return {
+    run: (async (name, input, opts) => exec(String(name), input, opts)) as RunFn<A & W & T>,
+    async resume(threadIdValue: string, value: unknown): Promise<unknown> {
+      const log = await store.readLog(threadIdValue as never);
+      const first = log[0];
+      if (!first || first.type !== "RunStarted") throw new Error(`resume("${threadIdValue}"): no RunStarted in log`);
+      return exec(first.entry, undefined, { threadId: threadIdValue }, { value });
+    },
+  };
 }
 
 /* ============================================================================
@@ -537,11 +598,12 @@ export function loopy<const A extends Record<string, AnyEntry>, const W extends 
   agents: A;
   workflows: W & NoKeyCollision<A, W>;
 }): Loopy<A & W, RequiredDeps<A & W>> {
-  void def;
-  return { provide: (() => undefined as never) as never, run: undefined as never } as Loopy<
-    A & W,
-    RequiredDeps<A & W>
-  >;
+  const make = (acc: Record<string, unknown>): unknown => ({
+    provide: (more: Record<string, unknown>) => make({ ...acc, ...more }),
+    run: (name: never, input: never, opts?: RunOpts) =>
+      defineLoopy({ agents: def.agents, workflows: def.workflows as never, deps: acc as never }).run(name, input, opts),
+  });
+  return make({}) as Loopy<A & W, RequiredDeps<A & W>>;
 }
 
 /* ============================================================================
@@ -696,3 +758,19 @@ export function team<
     router: (() => undefined as never) as never,
   } as TeamBuilder<Name, Agents, State>;
 }
+
+/* ============================================================================
+ * §9 — runtime surface re-exports (Task 13). Values must only be touched at
+ *      call time elsewhere in this module (see the ESM-cycle note up top).
+ * ========================================================================== */
+
+export { memoryStore } from "./runtime/store";
+export type { Checkpointer, Snapshot } from "./runtime/store";
+export { sqliteStore } from "./runtime/store-sqlite";
+export { stubModel } from "./runtime/model";
+export type { ModelClient, ModelRequest, ModelResponse, ModelMsg, StubModel } from "./runtime/model";
+export { RunSuspended } from "./runtime/scheduler";
+export { ReplayDivergence } from "./runtime/effects";
+export { AgentMaxStepsError } from "./runtime/drivers/agent";
+export { ParseError } from "./runtime/sap";
+export type { Event as RuntimeEvent, ThreadId, RunId } from "./runtime/events";
