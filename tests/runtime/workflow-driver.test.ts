@@ -49,15 +49,26 @@ describe("workflowDriver", () => {
     const starts = (await store.readLog(threadId("w1"))).filter((e) => e.type === "StepStarted").map((e) => e.node);
     expect(starts).toEqual(["build#1", "build#2", "approve#1"]);
   });
-  test("undefined transition → loud error; missing .returns() → loud error", async () => {
+  test("undefined transition → loud error", async () => {
     const broken = workflow({
       name: "noflow", state: { a: lastChannel<number>(0) }, input: io<{ x: number }>(), output: io<{ y: number }>(),
     })
       .nodes({ only: node(buildT, { reads: (s) => ({ n: s.input.x }) }) })
-      .flow((b) => b.start("only")); // edge 없음 + returns 없음
+      .flow((b) => b.start("only")); // edge 없음 → "only" 완료 후 전이 불가
     const d = workflowDriver(broken as never);
     await expect(
       runThread({ driver: d, store: memoryStore(), threadId: "w2", entry: "noflow", input: { x: 1 } }),
-    ).rejects.toThrow(/no edge or branch|needs .returns/);
+    ).rejects.toThrow(/no edge or branch/);
+  });
+  test("missing .returns() → loud error at completion", async () => {
+    const noReturns = workflow({
+      name: "noReturns", state: { a: lastChannel<number>(0) }, input: io<{ x: number }>(), output: io<{ y: number }>(),
+    })
+      .nodes({ only: node(buildT, { reads: (s) => ({ n: s.input.x }) }) })
+      .flow((b) => b.start("only").edge("only", END)); // 유효한 edge로 END 도달 — .returns() 미호출
+    const d = workflowDriver(noReturns as never);
+    await expect(
+      runThread({ driver: d, store: memoryStore(), threadId: "w3", entry: "noReturns", input: { x: 1 } }),
+    ).rejects.toThrow(/needs .returns/);
   });
 });
