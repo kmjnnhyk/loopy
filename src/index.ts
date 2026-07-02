@@ -20,6 +20,7 @@ import { agentDriver, agentNode, AgentMaxStepsError } from "./runtime/drivers/ag
 import { memoryStore } from "./runtime/store";
 import type { Checkpointer } from "./runtime/store";
 import type { ModelClient } from "./runtime/model";
+import { threadId as mkThreadId } from "./runtime/events";
 import type { Event as RuntimeEvent } from "./runtime/events";
 import type { Driver } from "./runtime/scheduler";
 
@@ -557,8 +558,10 @@ export function defineLoopy<
 
   const exec = async (name: string, input: unknown, opts?: RunOpts, resume?: { value: unknown }): Promise<unknown> => {
     const { driver, kind } = driverFor(name);
+    // restart-safe auto id; determinism only binds inside ctx — defineLoopy's body sits
+    // outside the recorded-effect boundary, so Math.random here is fine.
     const out = await _runThread({
-      driver, store, threadId: opts?.threadId ?? `${name}#${counter++}`, entry: name,
+      driver, store, threadId: opts?.threadId ?? `${name}#${counter++}-${Math.random().toString(36).slice(2, 8)}`, entry: name,
       deps: def.deps as Record<string, unknown>, models: def.models ?? {}, onEvent: def.onEvent,
       input, resume,
     });
@@ -568,7 +571,7 @@ export function defineLoopy<
   return {
     run: (async (name, input, opts) => exec(String(name), input, opts)) as RunFn<A & W & T>,
     async resume(threadIdValue: string, value: unknown): Promise<unknown> {
-      const log = await store.readLog(threadIdValue as never);
+      const log = await store.readLog(mkThreadId(threadIdValue));
       const first = log[0];
       if (!first || first.type !== "RunStarted") throw new Error(`resume("${threadIdValue}"): no RunStarted in log`);
       return exec(first.entry, undefined, { threadId: threadIdValue }, { value });
@@ -593,16 +596,22 @@ export interface Loopy<Reg, Missing extends keyof LoopyDeps> {
   readonly run: [Missing] extends [never] ? RunFn<Reg> : RunBlocked<Missing>;
 }
 
-/** deps deferred → returns a builder whose `run` unlocks only when Missing=never. */
+/** deps deferred → returns a builder whose `run` unlocks only when Missing=never.
+ *  v1 limit: the builder surface does not expose `resume` — apps that need suspend
+ *  should use defineLoopy (+ store). */
 export function loopy<const A extends Record<string, AnyEntry>, const W extends Record<string, AnyEntry>>(def: {
   agents: A;
   workflows: W & NoKeyCollision<A, W>;
 }): Loopy<A & W, RequiredDeps<A & W>> {
-  const make = (acc: Record<string, unknown>): unknown => ({
-    provide: (more: Record<string, unknown>) => make({ ...acc, ...more }),
-    run: (name: never, input: never, opts?: RunOpts) =>
-      defineLoopy({ agents: def.agents, workflows: def.workflows as never, deps: acc as never }).run(name, input, opts),
-  });
+  const make = (acc: Record<string, unknown>): unknown => {
+    let rt: Runtime<never> | null = null; // lazily built once per builder stage — runs share one runtime/store
+    const runtime = (): Runtime<never> =>
+      (rt ??= defineLoopy({ agents: def.agents, workflows: def.workflows as never, deps: acc as never }) as Runtime<never>);
+    return {
+      provide: (more: Record<string, unknown>) => make({ ...acc, ...more }),
+      run: (name: never, input: never, opts?: RunOpts) => runtime().run(name, input, opts),
+    };
+  };
   return make({}) as Loopy<A & W, RequiredDeps<A & W>>;
 }
 
