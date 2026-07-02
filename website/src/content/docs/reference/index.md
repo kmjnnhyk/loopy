@@ -3,7 +3,7 @@ title: API Reference
 description: One page per loopy primitive — signature, options, and a minimal example, straight from src/index.ts.
 ---
 
-Every page in this section documents one exported primitive, with its real signature and a minimal working example drawn from `src/index.ts` and `examples/*.ts`. Every primitive listed here — including `team()` — is on `master` today; see [Status & Roadmap](/status-roadmap/) for what's type-checked versus what's still a runtime stub.
+Every page in this section documents one exported primitive, with its real signature and a minimal working example drawn from `src/index.ts` and `examples/*.ts`. Every primitive listed here — including `team()` — is on `master` today. See [Status & Roadmap](/status-roadmap/) for what's type-checked versus what's still a runtime stub.
 
 ## Primitives
 

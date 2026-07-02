@@ -54,7 +54,7 @@ await runtime.run("designFlow", { message: "add /healthz" }); // : Promise<{ prU
 await runtime.run("typo", {});                                 // TS2322 — autocompletes the real names
 ```
 
-`run`'s `name` parameter is `keyof Reg`, and its `input`/return types are looked up per-entry via `InputOf`/`OutputOf` — a typo'd registry name is a compile error with autocomplete, not a runtime "not found."
+`run`'s `name` parameter is `keyof Reg`; its `input`/return types are looked up per-entry via `InputOf`/`OutputOf`. A typo'd registry name is a compile error with autocomplete, not a runtime "not found."
 
 ## Progressive injection: `loopy(def).provide(...)`
 

@@ -4,7 +4,7 @@ description: "loopy's state model is designed around one invariant: state = fold
 ---
 
 :::caution
-Everything on this page describes the **runtime design**, not something you can run today. `src/index.ts` implements the [channel](/core-concepts/channels-and-state/) and [Step](/core-concepts/step/) *type* machinery; the control loop, event log, and replay engine described below are the next milestone. See [Status & Roadmap](/status-roadmap/).
+Everything on this page describes the **runtime design**, not something you can run today. `src/index.ts` implements the [channel](/core-concepts/channels-and-state/) and [Step](/core-concepts/step/) *type* machinery. The control loop, event log, and replay engine described below are the next milestone. See [Status & Roadmap](/status-roadmap/).
 :::
 
 ## One invariant
@@ -20,11 +20,11 @@ Once that's the rule, several things that are usually separate features turn out
 
 ## Effects are requested, not performed inline
 
-For the fold to stay pure and replayable, a transition can't call `fetch`, an SDK, `Date.now()`, or `Math.random()` directly — any of those would make replay non-deterministic. Instead, effects go through the run context (`ctx`): `ctx.callModel(...)`, `ctx.callTool(...)`, `ctx.interrupt(...)`. Every effect is logged as a matched pair — a `*Requested` event written *before* the I/O happens, and a `*Returned` event written *after* — so a crash mid-effect is recoverable: on restart, an unpaired `*Requested` means "this didn't finish," and the effect can be safely re-issued. That's also the origin of the [`idempotencyKey`](/reference/tool/) contract on tools: a re-issued effect must be safe to run twice.
+For the fold to stay pure and replayable, a transition can't call `fetch`, an SDK, `Date.now()`, or `Math.random()` directly — any of those would make replay non-deterministic. Instead, effects go through the run context (`ctx`): `ctx.callModel(...)`, `ctx.callTool(...)`, `ctx.interrupt(...)`. Every effect is logged as a matched pair — a `*Requested` event written *before* the I/O happens, and a `*Returned` event written *after*. That makes a crash mid-effect recoverable: on restart, an unpaired `*Requested` means "this didn't finish," and the effect can be safely re-issued. That's also the origin of the [`idempotencyKey`](/reference/tool/) contract on tools: a re-issued effect must be safe to run twice.
 
 ## Suspending a *position*, not a closure
 
-JavaScript can't serialize a paused `async` function's continuation, so loopy doesn't try to. Instead of persisting a function, it persists three plain-data things: **which node you're at, the current channel values, and any pending effect**. Resuming means re-entering the graph at that node with that state — not "waking up" a frozen call stack. `ctx.interrupt(payload)` is the primitive this enables: it suspends the run, and a later `runtime.resume(threadId, value)` — potentially in a completely different process, days later — re-folds the log (no LLM calls for the already-completed prefix) and continues from exactly where the interrupt was raised. [Human-in-the-loop](/guides/human-in-the-loop/) is built entirely on this one primitive.
+JavaScript can't serialize a paused `async` function's continuation, so loopy doesn't try to. Instead of persisting a function, it persists three plain-data things: **which node you're at, the current channel values, and any pending effect**. Resuming means re-entering the graph at that node with that state — not "waking up" a frozen call stack. `ctx.interrupt(payload)` is the primitive this enables: it suspends the run. A later `runtime.resume(threadId, value)` — potentially in a completely different process, days later — re-folds the log (no LLM calls for the already-completed prefix) and continues from exactly where the interrupt was raised. [Human-in-the-loop](/guides/human-in-the-loop/) is built entirely on this one primitive.
 
 ## A worked example (design sketch)
 
@@ -41,7 +41,7 @@ A run that fails a build once, succeeds on retry, pauses for a human to approve,
 {seq:16, t:"RunEnded", output:{pr:"…/pull/42"}}
 ```
 
-Sequences 0–10 replay as cache hits on resume — `runBuild` is never called a third time; only `openPR`, which hadn't happened yet, performs real I/O. The committed log doubles as a deterministic regression test of the entire run, human approval included.
+Sequences 0–10 replay as cache hits on resume — `runBuild` is never called a third time. Only `openPR`, which hadn't happened yet, performs real I/O. The committed log doubles as a deterministic regression test of the entire run, human approval included.
 
 ## Next
 

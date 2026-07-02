@@ -32,7 +32,7 @@ A `Step` has a name, a typed input, a typed output, and a `run` function. That's
 
 ## Why this matters: an agent can stand in for a tool
 
-Because `Agent` extends `Step` the same way `Tool` does, an agent can be passed anywhere a tool is expected — a "sub-agent as tool," with no adapter:
+Because `Agent` extends `Step` the same way `Tool` does, an agent can be passed anywhere a tool is expected. That's a "sub-agent as tool," with no adapter:
 
 ```ts
 // examples/agents.ts
@@ -48,7 +48,7 @@ export const codeGen = agent({
 });
 ```
 
-`fileAnalyzer` above is itself an `agent()` — not a `tool()` — but it slots into `tools: [...]` next to real tools without any wrapper. `ToolDepKeys`, the type that folds every tool's declared dependencies into the agent's own dependency union, distributes over the tuple regardless of whether an entry is a `Tool` or an `Agent`, so `codeGen`'s inferred dependency requirement (`"repo"`) is correct even though one of its "tools" is a whole other agent.
+`fileAnalyzer` above is itself an `agent()` — not a `tool()` — but it slots into `tools: [...]` next to real tools without any wrapper. `ToolDepKeys` is the type that folds every tool's declared dependencies into the agent's own dependency union. It distributes over the tuple regardless of whether an entry is a `Tool` or an `Agent`, so `codeGen`'s inferred dependency requirement (`"repo"`) is correct even though one of its "tools" is a whole other agent.
 
 ## The `AnyStep` upper bound
 
@@ -58,7 +58,7 @@ Collections like `tools: readonly AnyStep[]` need an upper-bound type loose enou
 export type AnyStep = Step<string, IO<any, any>, IO<any, any>, keyof LoopyDeps>;
 ```
 
-The schema slots are widened to `IO<any, any>`, not to a concrete Standard-Schema type. That looks like giving up type safety, but it's the opposite: TypeScript checks a function *parameter* contravariantly, so a bound built from a concrete schema type collapses every real tool's `run` to `(input: unknown, ...) => ...` and then rejects it — the bound would be *too narrow* to hold any real tool. `any` is bidirectionally compatible and sidesteps that variance trap. This only loosens the structural upper bound used to collect a heterogeneous list; the concrete `Tool<...>` / `Agent<...>` types that `tool()` / `agent()` actually return stay fully precise.
+The schema slots are widened to `IO<any, any>`, not to a concrete Standard-Schema type. That looks like giving up type safety, but it's the opposite. TypeScript checks a function *parameter* contravariantly, so a bound built from a concrete schema type collapses every real tool's `run` to `(input: unknown, ...) => ...` and then rejects it — the bound would be *too narrow* to hold any real tool. `any` is bidirectionally compatible and sidesteps that variance trap. This only loosens the structural upper bound used to collect a heterogeneous list. The concrete `Tool<...>` / `Agent<...>` types that `tool()` / `agent()` actually return stay fully precise.
 
 ## Next
 

@@ -40,9 +40,9 @@ const needsInput = step({
 });
 ```
 
-`ctx.interrupt<UserClarification>({ kind: "clarify" })` suspends the run and, once resumed with a value matching `UserClarification`, returns that value and lets `needsInput` finish normally. The `{ kind: "clarify" }` payload is whatever context you want to hand to whatever's presenting the approval UI (a dashboard, a Slack message, a CLI prompt) — it's opaque to loopy.
+`ctx.interrupt<UserClarification>({ kind: "clarify" })` suspends the run. Once resumed with a value matching `UserClarification`, it returns that value and lets `needsInput` finish normally. The `{ kind: "clarify" }` payload is whatever context you want to hand to whatever's presenting the approval UI (a dashboard, a Slack message, a CLI prompt) — it's opaque to loopy.
 
-The channel this flows into is a named type across the whole workflow, not `unknown` — `jiraFlow.state.clarification` is `Channel<UserClarification | null, ...>`, checked in `examples/consumer.ts` as a real compile-assertion (`StateOf<typeof jiraFlow.state>["clarification"]` really does equal `UserClarification | null`, surviving the `.d.ts` package boundary).
+The channel this flows into is a named type across the whole workflow, not `unknown` — `jiraFlow.state.clarification` is `Channel<UserClarification | null, ...>`. This is checked in `examples/consumer.ts` as a real compile-assertion: `StateOf<typeof jiraFlow.state>["clarification"]` really does equal `UserClarification | null`, surviving the `.d.ts` package boundary.
 
 ## Inside a team: route it through a tool
 
@@ -64,7 +64,7 @@ export const reviewer = agent({
 });
 ```
 
-When `reviewer` decides to call `requestApproval`, the whole team run suspends at that point — the model's own reasoning up to and including "I should ask for approval" is preserved in the event log, so resuming doesn't re-run the model, only continues past the interrupt.
+When `reviewer` decides to call `requestApproval`, the whole team run suspends at that point. The model's own reasoning up to and including "I should ask for approval" is preserved in the event log, so resuming doesn't re-run the model — it only continues past the interrupt.
 
 ## What resume looks like (design intent)
 

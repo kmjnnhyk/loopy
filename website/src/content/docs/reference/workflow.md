@@ -34,7 +34,7 @@ interface FlowBuilder<S, NodeName extends string> {
 }
 ```
 
-`workflow(...)` alone returns a builder that only exposes `.nodes(...)`. Calling `.nodes({...})` — a **record of every node up front** — is what lets `.flow(...)` reference any node name in any order, including cycles and back-edges, without a "used before declared" error. (An earlier fluent `.step(...).branch(...)` shape was tried and dropped for exactly this reason: `.branch` couldn't see a node declared later in the same chain.)
+`workflow(...)` alone returns a builder that only exposes `.nodes(...)`. Calling `.nodes({...})` — a **record of every node up front** — is what lets `.flow(...)` reference any node name in any order, including cycles and back-edges. That's what avoids a "used before declared" error. (An earlier fluent `.step(...).branch(...)` shape was tried and dropped for exactly this reason: `.branch` couldn't see a node declared later in the same chain.)
 
 ## `FlowBuilder`
 

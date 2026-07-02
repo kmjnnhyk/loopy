@@ -24,7 +24,7 @@ export const fileAnalyzer = agent({
 });
 ```
 
-`fileAnalyzer` has no `tools` of its own — it's a small, focused agent whose whole job is "given a goal, decide which files matter." It still declares `deps: ["repo"]` because its instructions presumably tell it to look at the repo, even though there's no explicit tool call visible in this type signature (the model loop implementation, once it exists, is what actually performs that lookup).
+`fileAnalyzer` has no `tools` of its own — it's a small, focused agent whose whole job is "given a goal, decide which files matter." It still declares `deps: ["repo"]` because its instructions presumably tell it to look at the repo, even though there's no explicit tool call visible in this type signature. The model loop implementation, once it exists, is what actually performs that lookup.
 
 ## 3. Build the agent that uses it — as a tool
 
@@ -41,7 +41,7 @@ export const codeGen = agent({
 });
 ```
 
-`fileAnalyzer` sits in the `tools` array right next to real tools, with no wrapper or adapter. This works because `Agent` and `Tool` are both structurally a [`Step`](/core-concepts/step/) — see [The Step spine](/core-concepts/step/) for exactly why the type system allows it. Conceptually, `codeGen` can delegate "which files are relevant?" to `fileAnalyzer` the same way it'd call any other tool, and `fileAnalyzer`'s own model loop runs to answer it.
+`fileAnalyzer` sits in the `tools` array right next to real tools, with no wrapper or adapter. This works because `Agent` and `Tool` are both structurally a [`Step`](/core-concepts/step/) — see [The Step spine](/core-concepts/step/) for exactly why the type system allows it. Conceptually, `codeGen` can delegate "which files are relevant?" to `fileAnalyzer` the same way it'd call any other tool. `fileAnalyzer`'s own model loop then runs to answer it.
 
 ## 4. Check what got inferred
 
@@ -66,7 +66,7 @@ agent({
 });
 ```
 
-Two tools with the same `name` would otherwise collide silently inside the agent's internal tool map; `NoDuplicateTools` turns that into a compile-time rejection instead.
+Two tools with the same `name` would otherwise collide silently inside the agent's internal tool map. `NoDuplicateTools` turns that into a compile-time rejection instead.
 
 ## Next
 

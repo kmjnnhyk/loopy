@@ -45,7 +45,7 @@ export function agent<
 - **`input` / `output`** — [`IO<...>`](/core-concepts/schemas/) schemas, same as `tool()`.
 - **`tools`** — an array of `Tool`s and/or other `Agent`s (see [The Step spine](/core-concepts/step/) for why an agent can be passed here). Defaults to `[]`. Duplicate tool names are a compile error via `NoDuplicateTools` — `tools: [editFile, editFile]` won't type-check.
 - **`deps`** — dependencies the agent needs *directly* (beyond whatever its tools already declare). The agent's effective dependency union is `deps[number] | ToolDepKeys<Tools>` — see [Dependency injection](/core-concepts/dependency-injection/).
-- **`passTo`** — used exclusively by [`team()`](/reference/team/); a plain, standalone agent never needs it. Declares the names of other agents *within the same team* this agent is allowed to hand off to — at compile time, every name is checked against actual team membership (see [team() → the passTo membership guard](/reference/team/#the-passto-membership-guard)).
+- **`passTo`** — used exclusively by [`team()`](/reference/team/); a plain, standalone agent never needs it. Declares the names of other agents *within the same team* this agent is allowed to hand off to. At compile time, every name is checked against actual team membership (see [team() → the passTo membership guard](/reference/team/#the-passto-membership-guard)).
 
 ## Example
 
