@@ -103,10 +103,16 @@ export function agentDriver(agent: RtAgent, opts: { passToTargets?: readonly str
         }
         if (t["~kind"] === "agent") {
           // sub-agent-as-tool: 중첩 그래프. 같은 act 배치 내 재호출 구분자 @i
-          const env = (await runGraph(
-            agentDriver(t as unknown as RtAgent), `${scope}/${call.name}@${i}`, k, call.args,
-          )) as { output: unknown };
-          results.push({ role: "tool", toolCallId: call.id, content: stableStringify(env.output) });
+          try {
+            const env = (await runGraph(
+              agentDriver(t as unknown as RtAgent), `${scope}/${call.name}@${i}`, k, call.args,
+            )) as { output: unknown };
+            results.push({ role: "tool", toolCallId: call.id, content: stableStringify(env.output) });
+          } catch (err) {
+            if (isSuspend(err)) throw err; // HITL — 커널로 전파 (sub-agent 안의 interrupt 포함)
+            const msg = err instanceof Error ? err.message : String(err);
+            results.push({ role: "tool", toolCallId: call.id, content: `ERROR ${call.name}: ${msg}` });
+          }
           continue;
         }
         try {

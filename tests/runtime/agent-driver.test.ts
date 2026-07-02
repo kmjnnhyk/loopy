@@ -123,4 +123,28 @@ describe("agentDriver", () => {
     const nested = (await store.readLog(threadId("nest"))).filter((e) => e.node.includes("/sub@0/"));
     expect(nested.length).toBeGreaterThan(0); // sub의 think가 하위 scope에 기록됨
   });
+
+  test("failing sub-agent feeds back as ERROR tool result, parent continues", async () => {
+    const sub = agent({
+      name: "sub", model: "stub", instructions: "return {v:number}",
+      input: io<{ goal: string }>(), output: io<{ v: number }>(),
+      parseRetries: 0,
+    } as never);
+    const parent = mkAgent({ tools: [sub] } as never);
+    const m = stubModel([
+      callTools({ id: "c1", name: "sub", args: { goal: "g" } }), // parent think → call sub
+      { text: "not json at all", stopReason: "end_turn" },       // sub think → ParseError (parseRetries 0)
+      (req: { messages: Array<{ role: string; content: string }> }) => {
+        const last = req.messages[req.messages.length - 1]!;
+        if (!(last.role === "tool" && last.content.includes("ERROR") && last.content.includes("sub")))
+          throw new Error("sub-agent failure not fed back");
+        return answer({ done: true });                           // parent think #2
+      },
+    ] as never);
+    const env = (await runThread({
+      driver: agentDriver(parent as never), store: memoryStore(), threadId: "subfail",
+      entry: "a1", input: { q: "hi" }, models: { stub: m },
+    })) as { output: unknown };
+    expect(env.output).toEqual({ done: true }); // 부모 run이 완주함
+  });
 });
