@@ -151,11 +151,15 @@ export async function runThread(o: RunOptions): Promise<unknown> {
   const tid: ThreadId = mkThreadId(o.threadId);
   const loaded = await o.store.load(tid);
   let events: readonly Event[] = loaded?.events ?? [];
-  const snapshot = loaded?.snapshot ?? null;
 
-  let pending: { readonly effectId: number; readonly resumeKey: string; readonly payload: unknown } | null = null;
+  let pending: { effectId: number; resumeKey: string; payload: unknown } | null = null;
   if (o.resume) {
-    pending = snapshot?.status === "suspended" && snapshot.pending ? snapshot.pending : derivePendingFromLog(events);
+    // 로그가 유일한 권위: snapshot은 조회하지 않는다 — 낡은 suspended snapshot(예: resume 중
+    // patch 커밋 후 StepEnded 기록 실패)이 이미 소비된 pending으로 이중 재진입을 허가하는 것을
+    // 차단. 터미널 로그(RunEnded/RunErrored)가 있으면 미해소 InterruptRaised가 남아 있어도
+    // (노드가 Suspend를 삼킨 사용자 실수) resume 불가.
+    const terminal = events.some((e) => e.type === "RunEnded" || e.type === "RunErrored");
+    pending = terminal ? null : derivePendingFromLog(events);
     if (!pending) throw new Error(`resume("${o.threadId}"): thread is not suspended`);
   } else if (events.length > 0) {
     // v1: errored 스레드 재실행 불가 — 로그는 감사용 보존, 복구는 새 threadId.

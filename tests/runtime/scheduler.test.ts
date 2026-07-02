@@ -172,4 +172,58 @@ describe("runThread", () => {
     expect(out).toEqual({ done: true });
     expect(c.aTool).toBe(1); // 로그 복구 resume에서도 effect는 replay
   });
+
+  test("stale suspended snapshot cannot double-apply a committed patch (log is the authority)", async () => {
+    const inner = memoryStore();
+    const c = { aTool: 0 };
+    await runThread({ driver: toyDriver(c), store: inner, threadId: "t10", entry: "toy", input: { n: 3 } }).catch((e) => {
+      if (!(e instanceof RunSuspended)) throw e;
+    });
+    // resume#1: patch(StatePatched)는 커밋되지만 StepEnded 기록이 실패 —
+    // save(error)도 도달 못 해 snapshot은 suspended로 낡은 채 남음
+    const flaky = {
+      ...inner,
+      async appendEvents(t: ThreadId, es: readonly Event[]): Promise<void> {
+        if (es.some((e) => e.type === "StepEnded")) throw new Error("disk full");
+        return inner.appendEvents(t, es);
+      },
+    };
+    await expect(
+      runThread({ driver: toyDriver(c), store: flaky, threadId: "t10", entry: "toy", resume: { value: { approved: true } } }),
+    ).rejects.toThrow("disk full");
+    expect((await inner.load(threadId("t10")))?.snapshot?.status).toBe("suspended"); // 낡은 snapshot
+    const patchesBefore = (await inner.readLog(threadId("t10"))).filter((e) => e.type === "StatePatched").length;
+    // 재시도 resume: 낡은 snapshot의 pending이 아닌 로그가 판정 — 무음 이중 적용 대신 명시적 거부
+    await expect(
+      runThread({ driver: toyDriver(c), store: inner, threadId: "t10", entry: "toy", resume: { value: { approved: true } } }),
+    ).rejects.toThrow("not suspended");
+    const patchesAfter = (await inner.readLog(threadId("t10"))).filter((e) => e.type === "StatePatched").length;
+    expect(patchesAfter).toBe(patchesBefore); // 커밋된 patch가 이중 적용되지 않음
+  });
+
+  test("terminal thread with a swallowed Suspend cannot be resumed", async () => {
+    const store = memoryStore();
+    const d = toyDriver({ aTool: 0 });
+    // 사용자 실수 시뮬레이션: 노드가 Suspend를 삼켜 완주 — RunEnded와 미해소 InterruptRaised가 공존
+    const swallower: RunnableNode = {
+      reads: () => null,
+      run: async (_i, ctx) => {
+        try {
+          await ctx.interrupt({ ask: "x" });
+        } catch {
+          /* swallowed */
+        }
+        return { done: false };
+      },
+    };
+    d.node = () => swallower;
+    const out = await runThread({ driver: d, store, threadId: "t11", entry: "toy", input: { n: 1 } });
+    expect(out).toEqual({ done: false });
+    const types = (await store.readLog(threadId("t11"))).map((e) => e.type);
+    expect(types).toContain("InterruptRaised"); // 미해소 interrupt가 로그에 남아 있음
+    expect(types[types.length - 1]).toBe("RunEnded"); // 그런데 스레드는 터미널
+    await expect(
+      runThread({ driver: d, store, threadId: "t11", entry: "toy", resume: { value: { approved: true } } }),
+    ).rejects.toThrow("not suspended");
+  });
 });
