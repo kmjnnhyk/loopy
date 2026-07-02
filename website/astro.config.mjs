@@ -19,6 +19,13 @@ export default defineConfig({
 			editLink: {
 				baseUrl: 'https://github.com/kmjnnhyk/loopy/edit/master/website/',
 			},
+			customCss: ['./src/styles/custom.css'],
+			components: {
+				// Light theme by default (granite-style); users can still switch.
+				ThemeProvider: './src/components/ThemeProvider.astro',
+				// Adds Introduction / Quick Start / Reference links to the header.
+				SocialIcons: './src/components/HeaderLinks.astro',
+			},
 			defaultLocale: 'root',
 			locales: {
 				root: { label: 'English', lang: 'en' },

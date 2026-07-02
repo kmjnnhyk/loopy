@@ -1,0 +1,48 @@
+---
+// Landing hero illustration: three Step tiles composing along a loop —
+// the "everything reduces to a Step, folded over a shared log" idea.
+---
+
+<div class="lp-hero-art" aria-hidden="true">
+	<svg viewBox="0 0 440 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+		<defs>
+			<linearGradient id="lp-sheen" x1="0" y1="0" x2="0" y2="1">
+				<stop offset="0" stop-color="#ffffff" stop-opacity="0.28"></stop>
+				<stop offset="1" stop-color="#ffffff" stop-opacity="0"></stop>
+			</linearGradient>
+		</defs>
+
+		<!-- the loop -->
+		<circle
+			cx="220"
+			cy="200"
+			r="130"
+			stroke="var(--sl-color-gray-5)"
+			stroke-width="3"
+			stroke-dasharray="2 14"
+			stroke-linecap="round"></circle>
+		<path
+			d="M 341 156 L 356 178 L 330 182 Z"
+			fill="var(--sl-color-gray-4)"
+			transform="rotate(8 341 169)"></path>
+
+		<!-- Step tiles on the loop -->
+		<g class="lp-tile lp-tile-1">
+			<rect x="164" y="18" width="112" height="112" rx="28" fill="#3182f6"></rect>
+			<rect x="164" y="18" width="112" height="112" rx="28" fill="url(#lp-sheen)"></rect>
+			<rect x="192" y="56" width="56" height="10" rx="5" fill="#ffffff" opacity="0.9"></rect>
+			<rect x="192" y="78" width="36" height="10" rx="5" fill="#ffffff" opacity="0.55"></rect>
+		</g>
+		<g class="lp-tile lp-tile-2">
+			<rect x="42" y="230" width="104" height="104" rx="26" fill="#ffc342"></rect>
+			<rect x="42" y="230" width="104" height="104" rx="26" fill="url(#lp-sheen)"></rect>
+			<circle cx="94" cy="282" r="22" stroke="#ffffff" stroke-width="9" opacity="0.85"></circle>
+		</g>
+		<g class="lp-tile lp-tile-3">
+			<rect x="292" y="238" width="96" height="96" rx="24" fill="#b0b8c1"></rect>
+			<rect x="292" y="238" width="96" height="96" rx="24" fill="url(#lp-sheen)"></rect>
+			<rect x="316" y="270" width="48" height="9" rx="4.5" fill="#ffffff" opacity="0.9"></rect>
+			<rect x="316" y="289" width="30" height="9" rx="4.5" fill="#ffffff" opacity="0.55"></rect>
+		</g>
+	</svg>
+</div>

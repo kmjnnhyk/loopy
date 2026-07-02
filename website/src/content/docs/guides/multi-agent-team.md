@@ -1,5 +1,5 @@
 ---
-title: "Guide: a multi-agent team"
+title: A multi-agent team
 description: Build a PR-triage team step by step — an intake agent hands off to a specialist, a reviewer approves or bounces it back.
 ---
 

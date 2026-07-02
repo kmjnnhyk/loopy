@@ -1,5 +1,5 @@
 ---
-title: "Guide: a deterministic workflow"
+title: A deterministic workflow
 description: Build a two-phase workflow with retry cycles and branching, using state channels and a typed router.
 ---
 

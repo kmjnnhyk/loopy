@@ -5,47 +5,52 @@ template: splash
 banner:
   content: |
     loopy is a prototype — the type surface is complete and compile-checked, the runtime is not yet implemented. See <a href="/status-roadmap/">Status &amp; Roadmap</a>.
-hero:
-  tagline: '<strong>React for agents.</strong> Build LLM agents, tools, workflows, and multi-agent teams in one type-safe TypeScript DSL.'
-  actions:
-    - text: Quick Start
-      link: /getting-started/
-      icon: right-arrow
-    - text: Introduction
-      link: /introduction/
-      icon: open-book
-      variant: minimal
 ---
 
-import { Card, CardGrid, Badge } from '@astrojs/starlight/components';
+import HeroArt from '../../components/HeroArt.astro';
 
-<div style="text-align: center; margin-top: -2rem; margin-bottom: 2rem;">
-	<Badge text="Prototype — type surface complete, runtime not yet implemented" variant="caution" size="large" />
+<div class="lp-hero not-content">
+	<div class="lp-hero-text">
+		<p class="lp-eyebrow">loopy</p>
+		<h2 class="lp-headline">Type-safe<br/>LLM Agent<br/>Framework</h2>
+		<p class="lp-sub">React for agents. Compose tools, agents, workflows, and multi-agent teams from one primitive — a <code>Step</code> — with the compiler checking every seam.</p>
+		<div class="lp-actions">
+			<a class="lp-btn lp-btn-primary" href="/getting-started/">Quick Start</a>
+			<a class="lp-btn lp-btn-secondary" href="/introduction/">Introduction</a>
+		</div>
+	</div>
+	<HeroArt />
 </div>
 
-<CardGrid>
-	<Card title="One primitive" icon="puzzle">
-		Tools, agents, workflows, and teams all reduce to a single shape — a `Step`. Learn it once, compose everything.
-		[The Step spine →](/core-concepts/step/)
-	</Card>
-	<Card title="Type-safe end to end" icon="approve-check">
-		Inputs, outputs, dependencies, and handoff targets are inferred and checked at compile time. A typo is a red squiggle, not a runtime incident.
-		[Why loopy →](/introduction/)
-	</Card>
-	<Card title="Functional dependency injection" icon="setting">
-		No decorators, no globals. Each unit declares the dependency slice it needs, and the registry proves everything is supplied before anything runs.
-		[Dependency injection →](/core-concepts/dependency-injection/)
-	</Card>
-	<Card title="Event-sourced by design" icon="list-format">
-		Every turn, tool call, and state change is a logged event. Replay is a pure fold — deterministic tests with zero LLM calls.
-		[Event sourcing & replay →](/core-concepts/event-sourcing/)
-	</Card>
-	<Card title="Multi-agent teams" icon="comment-alt">
-		A team is a router over shared state. Handoff targets are membership-checked at compile time, so agents can't hand work to someone who isn't there.
-		[The team model →](/team-model/)
-	</Card>
-	<Card title="Vendor-neutral schemas" icon="random">
-		A [Standard Schema](https://standardschema.dev/)-shaped carrier means your Zod, Valibot, or ArkType types flow through unchanged.
-		[Schemas (IO) →](/core-concepts/schemas/)
-	</Card>
-</CardGrid>
+<div class="lp-grid not-content">
+	<div class="lp-card">
+		<div class="lp-card-icon">🧩</div>
+		<h3>One primitive</h3>
+		<p>Tools, agents, workflows, and teams all reduce to a single shape, a <code>Step</code>. Learn it once, compose everything.</p>
+	</div>
+	<div class="lp-card">
+		<div class="lp-card-icon">✅</div>
+		<h3>Type-safe end to end</h3>
+		<p>Inputs, outputs, dependencies, and handoff targets are checked at compile time. Typos never reach runtime.</p>
+	</div>
+	<div class="lp-card">
+		<div class="lp-card-icon">🧬</div>
+		<h3>Functional DI</h3>
+		<p>No decorators, no globals. Each unit declares the dependencies it needs, and a missing one is a compile error.</p>
+	</div>
+	<div class="lp-card">
+		<div class="lp-card-icon">📼</div>
+		<h3>Event-sourced core</h3>
+		<p>Every turn and tool call is a logged event. Replay any run deterministically, with zero LLM calls.</p>
+	</div>
+	<div class="lp-card">
+		<div class="lp-card-icon">🤝</div>
+		<h3>Multi-agent teams</h3>
+		<p>A router over shared, typed state picks the next agent. Invalid handoffs are rejected by the compiler.</p>
+	</div>
+	<div class="lp-card">
+		<div class="lp-card-icon">🧾</div>
+		<h3>Bring your own schema</h3>
+		<p>Zod, Valibot, or ArkType — anything Standard Schema-shaped flows through unchanged.</p>
+	</div>
+</div>

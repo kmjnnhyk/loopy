@@ -1,5 +1,5 @@
 ---
-title: "Guide: writing a tool"
+title: Writing a tool
 description: Build a tool step by step — declare a dependency, write a body, and understand the idempotency contract.
 ---
 

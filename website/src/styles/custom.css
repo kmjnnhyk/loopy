@@ -1,0 +1,363 @@
+/* ==========================================================================
+   loopy docs — Toss/granite-style design system on top of Starlight.
+   Light-first, Pretendard, blue accent, soft gray rounded surfaces.
+   ========================================================================== */
+
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+:root {
+	--sl-font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+		'Apple SD Gothic Neo', sans-serif;
+	--lp-radius-lg: 20px;
+	--lp-radius-md: 12px;
+}
+
+/* --- Palette (Toss-gray scale + blue accent) ------------------------------ */
+
+/* In Starlight's light theme, --sl-color-white is the strongest TEXT color
+   and --sl-color-black is the page BACKGROUND. */
+:root[data-theme='light'] {
+	--sl-color-white: #191f28;
+	--sl-color-gray-1: #333d4b;
+	--sl-color-gray-2: #4e5968;
+	--sl-color-gray-3: #6b7684;
+	--sl-color-gray-4: #8b95a1;
+	--sl-color-gray-5: #e5e8eb;
+	--sl-color-gray-6: #f2f4f6;
+	--sl-color-gray-7: #f9fafb;
+	--sl-color-black: #ffffff;
+
+	--sl-color-accent-low: #e8f3ff;
+	--sl-color-accent: #3182f6;
+	--sl-color-accent-high: #1b64da;
+	--sl-color-text-accent: #3182f6;
+
+	--sl-color-bg-nav: rgba(255, 255, 255, 0.88);
+	--sl-color-bg-sidebar: var(--sl-color-black);
+	--sl-color-hairline: #f2f4f6;
+	--sl-color-hairline-light: #f2f4f6;
+	--sl-color-hairline-shade: #e5e8eb;
+}
+
+:root[data-theme='dark'] {
+	--sl-color-white: #ffffff;
+	--sl-color-gray-1: #e5e8eb;
+	--sl-color-gray-2: #b0b8c1;
+	--sl-color-gray-3: #8b95a1;
+	--sl-color-gray-4: #6b7684;
+	--sl-color-gray-5: #333d4b;
+	--sl-color-gray-6: #1c222c;
+	--sl-color-black: #101319;
+
+	--sl-color-accent-low: #1c2c47;
+	--sl-color-accent: #4593fc;
+	--sl-color-accent-high: #7db4ff;
+	--sl-color-text-accent: #4593fc;
+
+	--sl-color-bg-nav: rgba(16, 19, 25, 0.88);
+	--sl-color-hairline: #1c222c;
+	--sl-color-hairline-light: #1c222c;
+	--sl-color-hairline-shade: #252c38;
+}
+
+/* --- Global typography ----------------------------------------------------- */
+
+body {
+	letter-spacing: -0.01em;
+	-webkit-font-smoothing: antialiased;
+}
+
+[lang='ko'] .sl-markdown-content,
+[lang='ko'] .lp-hero,
+[lang='ko'] .lp-card {
+	word-break: keep-all;
+}
+
+.sl-markdown-content {
+	line-height: 1.75;
+	font-size: 1rem;
+}
+
+.sl-markdown-content h1,
+.sl-markdown-content h2,
+.sl-markdown-content h3,
+h1[id='_top'] {
+	font-weight: 700;
+	letter-spacing: -0.02em;
+}
+
+.sl-markdown-content a:not(:where(.not-content *)) {
+	color: var(--sl-color-text-accent);
+	font-weight: 600;
+	text-decoration: none;
+}
+.sl-markdown-content a:not(:where(.not-content *)):hover {
+	text-decoration: underline;
+}
+
+.sl-markdown-content code:not(:where(pre *)) {
+	background: var(--sl-color-gray-6);
+	border-radius: 6px;
+	padding: 0.15em 0.4em;
+	font-size: 0.875em;
+}
+
+.sl-markdown-content pre {
+	border-radius: var(--lp-radius-md);
+	border: 1px solid var(--sl-color-hairline-shade);
+}
+
+.sl-markdown-content table code {
+	white-space: nowrap;
+}
+
+/* --- Header / nav ----------------------------------------------------------- */
+
+header.header {
+	border-bottom: 1px solid var(--sl-color-hairline);
+	backdrop-filter: blur(12px);
+}
+
+.site-title {
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	color: var(--sl-color-white);
+}
+
+/* Search opener → soft pill, like a Toss input */
+button[data-open-modal] {
+	border: none;
+	background: var(--sl-color-gray-6);
+	border-radius: 999px;
+	color: var(--sl-color-gray-3);
+	padding-inline: 0.9rem;
+}
+button[data-open-modal] > kbd {
+	background: var(--sl-color-black);
+	border-radius: 6px;
+}
+
+/* --- Sidebar ----------------------------------------------------------------- */
+
+.sidebar-content {
+	font-size: 0.9375rem;
+}
+.sidebar-content a {
+	border-radius: 8px;
+	color: var(--sl-color-gray-2);
+	font-weight: 500;
+}
+.sidebar-content a:hover {
+	color: var(--sl-color-white);
+	background: var(--sl-color-gray-7);
+}
+:root[data-theme='dark'] .sidebar-content a:hover {
+	background: var(--sl-color-gray-6);
+}
+.sidebar-content a[aria-current='page'],
+.sidebar-content a[aria-current='page']:hover {
+	background: var(--sl-color-accent-low);
+	color: var(--sl-color-accent-high);
+	font-weight: 700;
+}
+.sidebar-content .large {
+	font-size: 0.9375rem;
+	font-weight: 700;
+	color: var(--sl-color-white);
+}
+
+/* --- Banner (prototype notice) ---------------------------------------------- */
+
+.sl-banner {
+	--sl-color-banner-bg: #fff7e1;
+	--sl-color-banner-text: #8d6a1f;
+	background: var(--sl-color-banner-bg);
+	color: var(--sl-color-banner-text);
+	font-size: 0.875rem;
+	font-weight: 500;
+	box-shadow: none;
+	border-bottom: 1px solid #f5e7bd;
+}
+:root[data-theme='dark'] .sl-banner {
+	--sl-color-banner-bg: #2a2415;
+	--sl-color-banner-text: #e7ca70;
+	border-bottom-color: #3a321c;
+}
+.sl-banner a {
+	color: inherit;
+	font-weight: 700;
+}
+
+/* ==========================================================================
+   Landing page (granite-style hero + emoji feature cards)
+   ========================================================================== */
+
+/* The splash page renders its own composition — hide the default page title. */
+main:has(.lp-hero) h1[id='_top'] {
+	display: none;
+}
+main:has(.lp-hero) .content-panel {
+	border-top: none !important;
+	padding-top: 0;
+}
+
+.lp-hero {
+	display: grid;
+	grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+	align-items: center;
+	gap: 3rem;
+	padding-block: 4.5rem 1.5rem;
+}
+@media (max-width: 64rem) {
+	.lp-hero {
+		grid-template-columns: 1fr;
+		padding-block: 2.5rem 0.5rem;
+	}
+	.lp-hero-art {
+		display: none;
+	}
+}
+
+.lp-eyebrow {
+	margin: 0 0 0.4rem;
+	font-size: clamp(1.6rem, 3vw, 2.4rem);
+	font-weight: 800;
+	letter-spacing: -0.02em;
+	line-height: 1.15;
+	color: var(--sl-color-gray-4);
+}
+
+.lp-headline {
+	margin: 0 0 1.4rem;
+	font-size: clamp(2.1rem, 4.6vw, 3.6rem);
+	font-weight: 800;
+	letter-spacing: -0.03em;
+	line-height: 1.16;
+	color: var(--sl-color-white);
+}
+
+.lp-sub {
+	margin: 0 0 2.2rem;
+	max-width: 33rem;
+	font-size: 1.125rem;
+	line-height: 1.65;
+	color: var(--sl-color-gray-3);
+}
+
+.lp-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+}
+
+.lp-btn {
+	display: inline-block;
+	border-radius: 999px;
+	padding: 0.85rem 1.7rem;
+	font-size: 1.0625rem;
+	font-weight: 700;
+	text-decoration: none;
+	transition: background 0.15s ease;
+}
+.lp-btn-primary {
+	background: var(--sl-color-accent);
+	color: #ffffff;
+}
+.lp-btn-primary:hover {
+	background: var(--sl-color-accent-high);
+	color: #ffffff;
+}
+.lp-btn-secondary {
+	background: var(--sl-color-gray-6);
+	color: var(--sl-color-gray-1);
+}
+.lp-btn-secondary:hover {
+	background: var(--sl-color-gray-5);
+}
+
+/* --- Feature card grid ------------------------------------------------------- */
+
+.lp-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+	gap: 1rem;
+	margin-block: 3.5rem 2rem;
+}
+
+.lp-card {
+	background: var(--sl-color-gray-7);
+	border-radius: var(--lp-radius-lg);
+	padding: 1.9rem 1.75rem;
+}
+:root[data-theme='dark'] .lp-card {
+	background: var(--sl-color-gray-6);
+}
+
+.lp-card-icon {
+	display: grid;
+	place-items: center;
+	width: 3.1rem;
+	height: 3.1rem;
+	margin-bottom: 1.4rem;
+	font-size: 1.45rem;
+	line-height: 1;
+	background: var(--sl-color-black);
+	border-radius: 14px;
+	box-shadow: 0 1px 4px rgba(25, 31, 40, 0.08);
+}
+
+.lp-card h3 {
+	margin: 0 0 0.55rem;
+	font-size: 1.0625rem;
+	font-weight: 700;
+	letter-spacing: -0.01em;
+	color: var(--sl-color-white);
+}
+
+.lp-card p {
+	margin: 0;
+	font-size: 0.9375rem;
+	line-height: 1.65;
+	color: var(--sl-color-gray-3);
+}
+
+/* Landing sections opt out of Starlight's markdown styles via `not-content`,
+   so inline code chips inside them need their own styling. */
+.lp-sub code,
+.lp-card code {
+	background: var(--sl-color-gray-6);
+	border-radius: 6px;
+	padding: 0.12em 0.4em;
+	font-size: 0.85em;
+}
+
+/* --- Hero illustration ---------------------------------------------------- */
+
+.lp-hero-art svg {
+	width: 100%;
+	height: auto;
+	max-width: 26rem;
+	margin-inline: auto;
+	display: block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.lp-tile {
+		animation: lp-float 5s ease-in-out infinite;
+	}
+	.lp-tile-2 {
+		animation-delay: -1.6s;
+	}
+	.lp-tile-3 {
+		animation-delay: -3.2s;
+	}
+	@keyframes lp-float {
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(-9px);
+		}
+	}
+}

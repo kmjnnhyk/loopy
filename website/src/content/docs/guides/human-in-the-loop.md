@@ -1,5 +1,5 @@
 ---
-title: "Guide: human-in-the-loop"
+title: Human-in-the-loop
 description: Pause a run for a human decision with ctx.interrupt, and understand how resume picks up exactly where it left off.
 ---
 
