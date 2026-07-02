@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { EventSession, Memo, makeCtx, Suspend, isSuspend, ReplayDivergence } from "../../src/runtime/effects";
 import { memoryStore } from "../../src/runtime/store";
-import { threadId, runId } from "../../src/runtime/events";
+import { threadId, runId, digest, type Event, type ThreadId } from "../../src/runtime/events";
 import { stubModel } from "../../src/runtime/model";
 
 const T = threadId("t"), R = runId("r");
@@ -66,6 +66,49 @@ describe("callTool", () => {
     await Promise.all([ctx.callTool(slow as never, {}), ctx.callTool(fastT as never, {})]);
     const calls = (await store.readLog(T)).filter((e) => e.type === "ToolCalled") as Array<{ posKey: string; tool: string }>;
     expect(calls.map((c) => c.posKey)).toEqual(["n#1|0|tool:slow", "n#1|1|tool:fast"]);
+  });
+  test("tool failure survives a failing failure-record write", async () => {
+    // store rejects the ToolReturned append — the original domain error must
+    // still surface, not the store error
+    const inner = memoryStore();
+    const store = {
+      ...inner,
+      async appendEvents(t: ThreadId, es: readonly Event[]): Promise<void> {
+        if (es.some((e) => e.type === "ToolReturned")) throw new Error("disk full");
+        return inner.appendEvents(t, es);
+      },
+    };
+    const session = new EventSession(store, T, R, 0);
+    const ctx = makeCtx({ scope: "n#1", session, memo: Memo.fromEvents([]), deps: {} });
+    const bad = { name: "bad", run: async () => { throw new RangeError("kaput"); } };
+    await expect(ctx.callTool(bad as never, {})).rejects.toThrow("kaput");
+  });
+  test("dangling call re-issues (at-least-once)", async () => {
+    // log contains a ToolCalled with no ToolReturned (crash mid-effect)
+    const store = memoryStore();
+    const dangling: Event = {
+      seq: 0, threadId: T, runId: R, ts: "", node: "n#1",
+      type: "ToolCalled", effectId: 0, posKey: "n#1|0|tool:echo",
+      argsDigest: digest({ x: 1 }), tool: "echo", args: { x: 1 },
+    };
+    await store.appendEvents(T, [dangling]);
+    let ran = false;
+    const spy = {
+      ...echoTool,
+      run: async (i: { x: number }, c: { deps: Record<string, unknown> }) => ((ran = true), { x: i.x, dep: c.deps.repo }),
+    };
+    const { ctx: rctx } = await replayCtx(store);
+    const out = await rctx.callTool(spy as never, { x: 1 });
+    expect(out).toEqual({ x: 1, dep: "REPO" });
+    expect(ran).toBe(true); // re-issued for real, not served from memo
+    const log = await store.readLog(T);
+    expect(log.map((e) => e.type)).toEqual(["ToolCalled", "ToolCalled", "ToolReturned"]);
+    const reissued = log[1] as Extract<Event, { type: "ToolCalled" }>;
+    const returned = log[2] as Extract<Event, { type: "ToolReturned" }>;
+    expect(reissued.effectId).not.toBe(0); // NEW effectId
+    expect(reissued.posKey).toBe("n#1|0|tool:echo"); // same position
+    expect(returned.effectId).toBe(reissued.effectId);
+    expect(returned.ok).toBe(true);
   });
 });
 

@@ -235,7 +235,12 @@ export function makeCtx(o: {
       return value;
     } catch (err) {
       if (isSuspend(err)) throw err; // control signal — never record as failure
-      await o.session.write({ type: returnedType, effectId, ok: false, error: serializeError(err), node: o.scope });
+      try {
+        await o.session.write({ type: returnedType, effectId, ok: false, error: serializeError(err), node: o.scope });
+      } catch {
+        // store failure while recording the failure: the session latch already fails
+        // future writes loudly — surface the original domain error, not the store error
+      }
       throw err;
     }
   }
@@ -298,7 +303,8 @@ export function makeCtx(o: {
       if (hit?.result) return hit.result.value as number;
       const effectId = o.session.reserve();
       const value = Date.now();
-      void o.session.writeReserved(effectId, { type: "NowRead", effectId, posKey: pos, value, node: o.scope });
+      // sync signature can't await — the session latch surfaces the failure on the next awaited write
+      o.session.writeReserved(effectId, { type: "NowRead", effectId, posKey: pos, value, node: o.scope }).catch(() => {});
       return value;
     },
 
@@ -308,7 +314,8 @@ export function makeCtx(o: {
       if (hit?.result) return hit.result.value as number;
       const effectId = o.session.reserve();
       const value = Math.random();
-      void o.session.writeReserved(effectId, { type: "RandomRead", effectId, posKey: pos, value, node: o.scope });
+      // sync signature can't await — the session latch surfaces the failure on the next awaited write
+      o.session.writeReserved(effectId, { type: "RandomRead", effectId, posKey: pos, value, node: o.scope }).catch(() => {});
       return value;
     },
   };
