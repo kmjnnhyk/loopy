@@ -5,6 +5,7 @@ dist-examples/
 .remember/
 
 # Internal design / planning / brainstorming artifacts — kept on disk locally,
-# not published to the public repo. The user-facing docs live in the docs site.
-docs/
-loopy-vs-langchain.html
+# not published to the public repo. Root-anchored (/docs/) so it does NOT match
+# the docs site's own content at website/src/content/docs/.
+/docs/
+/loopy-vs-langchain.html
