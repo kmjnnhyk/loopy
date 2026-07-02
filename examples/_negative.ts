@@ -137,3 +137,13 @@ const nwf2Base = workflow({
 });
 // @ts-expect-error — {ok:boolean;log:string} is not assignable to channel a: number
 export const badWfOutput = nwf2Base.nodes({ b: node(buildFixture, { reads: () => ({ p: "" }), writes: "a" }) });
+
+// N-wf3: a value that is neither a Step nor a node() binding → "~nodeInvalid" brand
+const nwf3Base = workflow({
+  name: "nwf3",
+  state: { a: lastChannel<number>(0) },
+  input: io<{ x: number }>(),
+  output: io<{ y: number }>(),
+});
+// @ts-expect-error — 42 is neither a Step nor a node() binding
+export const badWfEntry = nwf3Base.nodes({ b: 42 });

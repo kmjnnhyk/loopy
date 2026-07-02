@@ -309,7 +309,9 @@ export function node<St extends AnyStep, const W extends string = never>(
 export type WorkflowView<State, In extends IO<any, any>> = StateOf<State> & { readonly input: InferOut<In> };
 
 /** per-slot guard: writes must name an existing channel AND output ⊑ channel value;
- *  a bare Step (no binding) is allowed only when the full state view satisfies its input. */
+ *  a bare Step (no binding) is allowed only when the full state view satisfies its input;
+ *  a value that is neither a Step nor a node() binding is branded "~nodeInvalid" —
+ *  this closes the gap left by nodes()'s loosened Record<string, unknown> bound. */
 export type BindingCheck<State, In extends IO<any, any>, N> = {
   [K in keyof N]: N[K] extends NodeBinding<infer St, infer W>
     ? [W] extends [never]
@@ -323,7 +325,7 @@ export type BindingCheck<State, In extends IO<any, any>, N> = {
       ? [WorkflowView<State, In>] extends [InferOut<N[K]["input"]>]
         ? N[K]
         : { readonly "~nodeNeedsReads": K }
-      : N[K];
+      : { readonly "~nodeInvalid": K };
 };
 
 /** A workflow node = any Step (tool / agent / inline step). */
@@ -404,9 +406,8 @@ export interface WorkflowInit<Name extends string, State, In extends IO<any, any
   // then infers `W = string` instead of the documented default `never` (verified via an
   // isolated repro; a bare `Record<string, unknown>` bound removes the leaking candidate
   // and restores `W = never` for bare `node(step, { reads })` calls). Validation strength
-  // is otherwise unchanged: BindingCheck below still fully checks every entry that IS a
-  // NodeBinding or AnyStep; only a non-Step, non-binding garbage value (not exercised by
-  // any example or negative fixture) would no longer be rejected at this constraint.
+  // is unchanged: BindingCheck below fully checks every NodeBinding/AnyStep entry, and
+  // its "~nodeInvalid" fallback brands anything that is neither (N-wf3 fixture).
   nodes<const Nodes extends Record<string, unknown>>(
     nodes: Nodes & BindingCheck<State, In, Nodes>,
   ): WorkflowNodes<
