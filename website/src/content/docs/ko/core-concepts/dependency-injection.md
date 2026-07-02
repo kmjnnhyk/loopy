@@ -38,7 +38,7 @@ declare module "loopy" {
 
 ## deps는 왜 *추론*이 아니라 *선언*일까요
 
-loopy가 툴의 `run` 본문을 들여다보고 `deps.repo.read(...)`를 발견해서 이 툴에 `"repo"`가 필요하다고 추론해 주면 좋겠지만, TypeScript는 그렇게 할 수 없어요. 타입 추론은 선언된 매개변수 타입에서 함수 본문 *안으로* 흘러 들어갈 뿐, 본문 안의 사용처에서 *바깥으로* 흘러나오지 않아요. 그래서 loopy는 정직한 거래를 택해요. **유닛에 필요한 의존성 조각을, `LoopyDeps`의 문자열 리터럴 키 배열로 직접 선언하는 거예요.** 그 아래 모든 것 — `ctx.deps`, 에이전트가 누적한 의존성 유니온, 레지스트리가 요구하는 의존성 집합 — 은 이 선언에서 `Pick`, `|`, `Exclude`로 유도돼요. 런타임 리플렉션은 어디에도 없어요.
+loopy가 툴의 `run` 본문을 들여다보고 `deps.repo.read(...)`를 발견해서 이 툴에 `"repo"`가 필요하다고 추론해 주면 좋겠지만, TypeScript는 그렇게 할 수 없어요. 타입 추론은 선언된 매개변수 타입에서 함수 본문 *안으로* 흘러 들어갈 뿐이고, 본문 안의 사용처에서 *바깥으로* 흘러나오지는 않거든요. 그래서 loopy는 정직한 방식을 택해요. **유닛에 필요한 의존성 조각을 `LoopyDeps`의 문자열 리터럴 키 배열로 직접 선언해요.** `ctx.deps`, 에이전트가 누적한 의존성 유니온, 레지스트리가 요구하는 의존성 집합까지, 그 아래 모든 것이 이 선언 하나에서 `Pick`, `|`, `Exclude`로 유도돼요. 런타임 리플렉션은 어디에도 없어요.
 
 ```ts
 // examples/tools.ts
@@ -49,7 +49,7 @@ export const editFile = tool({
   output: io<{ applied: boolean }>(),
   deps: ["repo"],
   run: async (i, { deps }) => {
-    // deps : Pick<LoopyDeps, "repo">  — 여기서 deps.figma를 쓰면 TS2339 에러가 나요
+    // deps : Pick<LoopyDeps, "repo">. deps.figma를 쓰면 TS2339 에러가 나요
     const cur = await deps.repo.read(i.path);
     await deps.repo.write(i.path, cur.replace(i.find, i.replace));
     return { applied: true };
@@ -57,7 +57,7 @@ export const editFile = tool({
 });
 ```
 
-`run` 안의 `ctx.deps`는 `Pick<LoopyDeps, D>` 타입을 가져요. 여기서 `D`는 여러분이 작성한 `deps` 배열 그대로예요 — `LoopyDeps` 전체가 아니에요. 선언하지 않은 의존성에 손을 뻗으면, 아무것도 실행되기 전에 TypeScript가 바로 거부해요:
+`run` 안의 `ctx.deps`는 `Pick<LoopyDeps, D>` 타입을 가져요. 여기서 `D`는 `LoopyDeps` 전체가 아니라, 여러분이 작성한 `deps` 배열 그대로예요. 선언하지 않은 의존성에 손을 뻗으면 아무것도 실행되기 전에 TypeScript가 바로 거부해요:
 
 ```ts
 export interface ToolCtx<D extends keyof LoopyDeps> {
@@ -81,7 +81,7 @@ export const codeGen = agent({
   tools: [editFile, createFile, readFile, fileAnalyzer], // fileAnalyzer도 "repo"를 선언해요
   deps: ["repo"],
 });
-// codeGen의 전체 의존성 유니온은 정확히 "repo"예요 — 넓어지지도, 빠지지도 않아요.
+// codeGen의 전체 의존성 유니온은 정확히 "repo"예요. 넓어지지도, 빠지지도 않아요.
 ```
 
 이 유니온은 [레지스트리](/ko/reference/registry/)까지 계속 타고 올라가요. 레지스트리는 등록된 모든 것이 요구하는 의존성이 실제로 다 채워지기 전까지는 `run`에 타입을 붙여주지 않아요.

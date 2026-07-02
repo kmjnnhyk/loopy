@@ -1,0 +1,41 @@
+---
+import Default from '@astrojs/starlight/components/SocialIcons.astro';
+
+const path = Astro.url.pathname;
+const isKo = path === '/ko' || path.startsWith('/ko/');
+const base = isKo ? '/ko' : '';
+const links = [
+	{ href: `${base}/introduction/`, label: isKo ? '소개' : 'Introduction' },
+	{ href: `${base}/getting-started/`, label: isKo ? '빠른 시작' : 'Quick Start' },
+	{ href: `${base}/reference/`, label: isKo ? '레퍼런스' : 'Reference' },
+];
+---
+
+<nav class="lp-topnav" aria-label={isKo ? '주요 문서' : 'Primary'}>
+	{links.map((l) => <a href={l.href}>{l.label}</a>)}
+</nav>
+<Default><slot /></Default>
+
+<style>
+	.lp-topnav {
+		display: none;
+		align-items: center;
+		gap: 1.4rem;
+		margin-inline-end: 0.75rem;
+	}
+	@media (min-width: 72rem) {
+		.lp-topnav {
+			display: flex;
+		}
+	}
+	.lp-topnav a {
+		color: var(--sl-color-gray-2);
+		font-size: var(--sl-text-sm);
+		font-weight: 600;
+		text-decoration: none;
+		white-space: nowrap;
+	}
+	.lp-topnav a:hover {
+		color: var(--sl-color-text-accent);
+	}
+</style>

@@ -1,9 +1,9 @@
 ---
 title: team()
-description: 노드로 쓰이는 에이전트들, 공유 트랜스크립트, 핸드오프 슈거 — 멀티 에이전트 원시 타입이에요. 라우터가 매 턴 다음 에이전트 하나를 골라요.
+description: 노드로 쓰이는 에이전트들, 공유 트랜스크립트, 핸드오프 슈거를 갖춘 멀티 에이전트를 위한 기본 단위예요. 라우터가 매 턴 다음 에이전트 하나를 골라요.
 ---
 
-`team()`은 [`workflow()`](/ko/reference/workflow/)와 같은 그래프 메커니즘 위에 얹힌, 가볍고 견해가 뚜렷한 프리셋이에요. 에이전트가 노드가 되고, 공유 `transcript` 채널과 `nextAgent` 제어 채널이 자동으로 주입되며, 에이전트는 명시적인 `.router(...)`에 더해(또는 그 대신) `passTo`로 자기 자신의 핸드오프를 요청할 수 있어요.
+`team()`은 [`workflow()`](/ko/reference/workflow/)와 같은 그래프 메커니즘 위에 얹힌, 가볍고 견해가 뚜렷한 프리셋이에요. 에이전트가 노드가 되고, 공유 `transcript` 채널과 `nextAgent` 제어 채널이 자동으로 주입돼요. 에이전트는 명시적인 `.router(...)`에 더해(또는 그 대신) `passTo`로 자기 자신의 핸드오프를 요청할 수 있어요.
 
 ## 시그니처
 
@@ -42,14 +42,14 @@ interface TeamBuilder<Name, Agents, State> {
 }
 ```
 
-`team({...})`는 빌더를 반환해요 — `.writes(...)`는 선택이고, `.router(...)`가 이를 `Team`으로 최종 확정해요. 라우터가 읽는 채널에 어떤 에이전트의 출력도 담을 필요가 없다면 `.writes(...)`는 아예 생략해도 돼요.
+`team({...})`는 빌더를 반환해요. `.writes(...)`는 선택이고, `.router(...)`가 이를 `Team`으로 최종 확정해요. 라우터가 읽는 채널에 어떤 에이전트의 출력도 담을 필요가 없다면 `.writes(...)`는 아예 생략해도 돼요.
 
 ## 필드
 
 - **`entry`** — 어떤 에이전트가 먼저 시작할지예요. `agents`의 키 중 하나여야 해요.
-- **`state`** — 여러분의 도메인 채널이에요([채널 & 상태](/ko/core-concepts/channels-and-state/) 참고). 실행에 초깃값을 넣어주기 위해 보통 [`inputChannel()`](/ko/reference/channels/#inputchannel)을 최소 하나 둬요.
-- **`agents`** — `agent()`들의 레코드예요. 여기 있는 어떤 에이전트가 선언한 `passTo` 대상이든 전부 이 레코드의 키여야 해요 — 아래 가드를 보세요.
-- **`maxTurns`** — 실행이 멈춘 것으로 간주되기 전까지 에이전트 턴을 몇 번 허용할지 정하는 안전장치예요(부분 결과를 조용히 반환하는 대신 에러를 던져요).
+- **`state`** — 여러분의 도메인 채널이에요. ([채널 & 상태](/ko/core-concepts/channels-and-state/) 참고) 실행에 초깃값을 넣어주기 위해 보통 [`inputChannel()`](/ko/reference/channels/#inputchannel)을 최소 하나 둬요.
+- **`agents`** — `agent()`들의 레코드예요. 여기 있는 어떤 에이전트가 선언한 `passTo` 대상이든 전부 이 레코드의 키여야 해요. 아래 가드를 보세요.
+- **`maxTurns`** — 실행이 멈춘 것으로 간주되기 전까지 에이전트 턴을 몇 번 허용할지 정하는 안전장치예요. (부분 결과를 조용히 반환하는 대신 에러를 던져요.)
 
 ## 자동 주입되는 상태
 
@@ -67,17 +67,17 @@ export type TeamAutoState<Names extends string> = {
 };
 ```
 
-- **`transcript`** — 지금까지 어떤 에이전트든 만들어낸 모든 메시지예요. 그래서 나중에 합류하는 에이전트도 전체 맥락을 가질 수 있어요.
-- **`nextAgent`** — 슬롯 하나짜리 "핸드오프 메모"예요. 에이전트의 `passTo`가 자신이 허용된 이름 중 하나를 대상으로 지정하면, 그 이름이 여기에 담겨요. 여러분의 `.router(...)`가 이걸 읽고 다음에 누가 갈지 결정해요.
+- **`transcript`** — 지금까지 어떤 에이전트든 만들어낸 모든 메시지예요. 나중에 합류하는 에이전트도 이 덕분에 전체 맥락을 가질 수 있어요.
+- **`nextAgent`** — 슬롯 하나짜리 "핸드오프 메모"예요. 에이전트의 `passTo`가 자신이 허용된 이름 중 하나를 대상으로 지정하면 그 이름이 여기 담겨요. 여러분의 `.router(...)`가 이걸 읽고 다음에 누가 갈지 결정해요.
 
 ## `passTo` 대 `.router()`
 
-둘 다 "다음은 누구인가?"에 답해요 — 차이는 **누가 결정하느냐**예요.
+둘 다 "다음은 누구인가?"에 답해요. 차이는 **누가 결정하느냐**예요.
 
-- **`passTo`**([`agent()`](/ko/reference/agent/#필드)에 선언해요) — *모델*이 결정해요. 결정을 내리려면 실제로 입력을 읽어야 하기 때문이에요(예: "이게 버그 요청인가요, 문서 요청인가요?"). 에이전트가 대상을 고르면 그게 `nextAgent`에 담겨요.
-- **`.router(fn)`** — *여러분의 코드*가 결정해요. 규칙이 고정돼 있기 때문이에요(예: "리뷰가 승인됐으면 멈춘다"). `fn`은 `nextAgent`를 포함한 전체 상태 스냅샷을 받아서 다음 에이전트 이름이나 [`END`](/ko/reference/channels/#end)를 반환해요.
+- **`passTo`**([`agent()`](/ko/reference/agent/#필드)에 선언해요) — *모델*이 결정해요. 실제로 입력을 읽어야만 판단할 수 있는 결정이기 때문이에요. (예: "이게 버그 요청인가요, 문서 요청인가요?") 에이전트가 대상을 고르면 그게 `nextAgent`에 담겨요.
+- **`.router(fn)`** — *여러분의 코드*가 결정해요. 규칙이 고정돼 있기 때문이에요. (예: "리뷰가 승인됐으면 멈춘다") `fn`은 `nextAgent`를 포함한 전체 상태 스냅샷을 받아서, 다음 에이전트 이름이나 [`END`](/ko/reference/channels/#end)를 반환해요.
 
-이 둘은 조합돼요 — 라우터는 보통 `nextAgent`를 먼저 확인하고, 그다음 자신의 규칙으로 넘어가요.
+이 둘은 조합해서 쓸 수 있어요. 라우터는 보통 `nextAgent`를 먼저 확인하고, 그다음 자신의 규칙으로 넘어가요.
 
 ```ts
 // examples/team.ts
@@ -91,7 +91,7 @@ export type TeamAutoState<Names extends string> = {
 
 ## `passTo` 멤버십 가드
 
-`agents: Agents & GuardAgents<Agents>`는 에이전트마다, `passTo`에 담긴 모든 이름이 실제로 `agents` 레코드의 키인지 검사해요. 엉뚱한 대상이 있어도 호출 전체가 실패하지는 않아요 — *그 에이전트의 슬롯만* 이름 붙은 에러로 표시돼요.
+`agents: Agents & GuardAgents<Agents>`는 에이전트마다 `passTo`에 담긴 모든 이름이 실제로 `agents` 레코드의 키인지 검사해요. 엉뚱한 대상이 있어도 호출 전체가 실패하지는 않아요. *그 에이전트의 슬롯만* 이름 붙은 에러로 표시돼요.
 
 ```ts
 export type GuardAgents<Agents> = {
@@ -104,9 +104,9 @@ export type GuardAgents<Agents> = {
 
 `passTo`가 아예 없는 에이전트(예: 오직 `.router`로만 종료되는 리뷰어)는 이 검사를 그냥 통과해요.
 
-## `.writes()` — output ⊑ channel, 검사돼요
+## `.writes()`: 출력이 채널에 대입되는지 검사해요
 
-`.writes({ agentName: "channelKey" })`는 "이 에이전트의 출력을 이 채널에 써라"라는 뜻이에요. 각 매핑은 컴파일 타임에 검사돼요. 에이전트의 출력 타입이 채널의 값 타입에 대입 가능해야 하고, 아니면 그 슬롯만 이름 붙은 불일치 에러(`WritesOutputCheck`)로 표시돼요 — 호출 전체를 가리키는 뭉뚱그린 타입 에러가 아니에요.
+`.writes({ agentName: "channelKey" })`는 "이 에이전트의 출력을 이 채널에 써라"라는 뜻이에요. 각 매핑은 컴파일 타임에 검사돼요. 에이전트의 출력 타입이 채널의 값 타입에 대입 가능해야 하고, 아니라면 그 슬롯만 이름 붙은 불일치 에러(`WritesOutputCheck`)로 표시돼요. 호출 전체를 가리키는 뭉뚱그린 타입 에러가 아니에요.
 
 ```ts
 // examples/team.ts
@@ -163,11 +163,11 @@ export const teamRt = defineLoopy({
 const out: ReviewResult | null = await teamRt.run("prTriage", { issue: { id: 7, body: "…" } });
 ```
 
-`defineLoopy`의 `teams` 필드는 각 팀의 `TeamDeps<Agents>`를 `agents`/`workflows`와 같은 `RequiredDeps` 유니온으로 모아요 — [레지스트리](/ko/reference/registry/)를 보세요.
+`defineLoopy`의 `teams` 필드는 각 팀의 `TeamDeps<Agents>`를, `agents`/`workflows`와 같은 `RequiredDeps` 유니온으로 모아요. 자세한 내용은 [레지스트리](/ko/reference/registry/)를 보세요.
 
 ## 팀 안에서의 휴먼 인 더 루프
 
-`agent()`는 임의의 본문을 가질 수 없어서(그 "본문"이 곧 모델 루프예요), 사람의 승인 단계가 필요한 팀은 대신 툴을 통해 그걸 라우팅해요 — `ToolCtx`가 `interrupt`를 갖고 있는 이유가 바로 이거예요.
+`agent()`는 임의의 본문을 가질 수 없어요. (그 "본문"이 곧 모델 루프예요.) 그래서 사람의 승인 단계가 필요한 팀은 대신 툴을 통해 그 단계를 라우팅해요. `ToolCtx`가 `interrupt`를 갖고 있는 이유가 바로 이거예요.
 
 ```ts
 export const requestApproval = tool({
@@ -186,3 +186,4 @@ export const requestApproval = tool({
 - [팀 모델 깊이 보기](/ko/team-model/) — 턴별로 안내하는 전체 설명이에요.
 - [가이드 → 멀티 에이전트 팀](/ko/guides/multi-agent-team/)
 - [현황과 로드맵](/ko/status-roadmap/) — 아직 스텁으로 돌아가는 부분이에요.
+</content>

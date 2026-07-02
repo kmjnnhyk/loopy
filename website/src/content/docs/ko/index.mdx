@@ -4,48 +4,53 @@ description: React for agents — LLM 에이전트, 툴, 워크플로우, 팀을
 template: splash
 banner:
   content: |
-    loopy는 프로토타입이에요 — 타입 표면은 완성되어 컴파일 검증까지 마쳤지만, 런타임은 아직 구현 전이에요. <a href="/ko/status-roadmap/">현황과 로드맵</a>을 확인하세요.
-hero:
-  tagline: '<strong>React for agents.</strong> LLM 에이전트, 툴, 워크플로우, 멀티 에이전트 팀을 하나의 타입 세이프 TypeScript DSL로 만들어요.'
-  actions:
-    - text: 빠른 시작
-      link: /ko/getting-started/
-      icon: right-arrow
-    - text: 소개
-      link: /ko/introduction/
-      icon: open-book
-      variant: minimal
+    loopy는 아직 프로토타입이에요. 타입 설계는 완성되어 컴파일로 검증을 마쳤지만, 런타임은 구현 전이에요. <a href="/ko/status-roadmap/">현황과 로드맵</a>에서 자세히 확인할 수 있어요.
 ---
 
-import { Card, CardGrid, Badge } from '@astrojs/starlight/components';
+import HeroArt from '../../../components/HeroArt.astro';
 
-<div style="text-align: center; margin-top: -2rem; margin-bottom: 2rem;">
-	<Badge text="프로토타입 — 타입 표면 완성, 런타임 미구현" variant="caution" size="large" />
+<div class="lp-hero not-content">
+	<div class="lp-hero-text">
+		<p class="lp-eyebrow">loopy</p>
+		<h2 class="lp-headline">타입 세이프<br/>LLM 에이전트<br/>프레임워크</h2>
+		<p class="lp-sub">React for agents. 툴, 에이전트, 워크플로우, 멀티 에이전트 팀을 <code>Step</code> 하나로 조합하고, 이음새는 컴파일러가 검사해요.</p>
+		<div class="lp-actions">
+			<a class="lp-btn lp-btn-primary" href="/ko/getting-started/">빠른 시작</a>
+			<a class="lp-btn lp-btn-secondary" href="/ko/introduction/">소개</a>
+		</div>
+	</div>
+	<HeroArt />
 </div>
 
-<CardGrid>
-	<Card title="하나의 원시 타입" icon="puzzle">
-		툴, 에이전트, 워크플로우, 팀이 전부 하나의 형태 — `Step` — 로 환원돼요. 한 번 배우면 모든 걸 조합할 수 있어요.
-		[Step 구조 →](/ko/core-concepts/step/)
-	</Card>
-	<Card title="끝까지 타입 세이프" icon="approve-check">
-		입력, 출력, 의존성, 핸드오프 대상까지 전부 컴파일 타임에 추론되고 검사돼요. 오타는 런타임 장애가 아니라 빨간 밑줄이에요.
-		[왜 loopy인가요? →](/ko/introduction/)
-	</Card>
-	<Card title="함수형 의존성 주입" icon="setting">
-		데코레이터도, 전역 상태도 없어요. 각 유닛이 필요한 의존성 조각만 선언하면, 레지스트리가 실행 전에 모든 의존성이 채워졌는지 증명해요.
-		[의존성 주입 →](/ko/core-concepts/dependency-injection/)
-	</Card>
-	<Card title="이벤트 소싱 기반 설계" icon="list-format">
-		모든 턴, 툴 호출, 상태 변화가 이벤트로 기록돼요. 리플레이는 순수한 fold라서 LLM 호출 없이 결정적으로 테스트할 수 있어요.
-		[이벤트 소싱과 리플레이 →](/ko/core-concepts/event-sourcing/)
-	</Card>
-	<Card title="멀티 에이전트 팀" icon="comment-alt">
-		팀은 공유 상태 위의 라우터예요. 핸드오프 대상이 컴파일 타임에 멤버십 검사되니, 존재하지 않는 에이전트에게 일을 넘길 수 없어요.
-		[팀 모델 →](/ko/team-model/)
-	</Card>
-	<Card title="벤더 중립 스키마" icon="random">
-		[Standard Schema](https://standardschema.dev/) 형태의 캐리어 덕분에 Zod, Valibot, ArkType 타입이 그대로 흘러들어가요.
-		[스키마 (IO) →](/ko/core-concepts/schemas/)
-	</Card>
-</CardGrid>
+<div class="lp-grid not-content">
+	<div class="lp-card">
+		<div class="lp-card-icon">🧩</div>
+		<h3>기본 단위는 하나</h3>
+		<p>툴도, 에이전트도, 워크플로우도, 팀도 결국 <code>Step</code> 하나예요. 한 번 배우면 전부 조합할 수 있어요.</p>
+	</div>
+	<div class="lp-card">
+		<div class="lp-card-icon">✅</div>
+		<h3>끝까지 타입 안전</h3>
+		<p>입력, 출력, 의존성, 핸드오프 대상까지 컴파일 타임에 검사해요. 오타가 런타임까지 살아남지 못해요.</p>
+	</div>
+	<div class="lp-card">
+		<div class="lp-card-icon">🧬</div>
+		<h3>함수형 의존성 주입</h3>
+		<p>데코레이터도 전역 상태도 없어요. 필요한 의존성만 선언하면 되고, 빠뜨리면 컴파일 에러가 알려줘요.</p>
+	</div>
+	<div class="lp-card">
+		<div class="lp-card-icon">📼</div>
+		<h3>이벤트 소싱 코어</h3>
+		<p>모든 턴과 툴 호출이 이벤트로 기록돼요. 어떤 실행이든 LLM 호출 없이 그대로 재현할 수 있어요.</p>
+	</div>
+	<div class="lp-card">
+		<div class="lp-card-icon">🤝</div>
+		<h3>멀티 에이전트 팀</h3>
+		<p>공유 상태를 보고 라우터가 다음 에이전트를 정해요. 잘못된 핸드오프는 컴파일러가 막아줘요.</p>
+	</div>
+	<div class="lp-card">
+		<div class="lp-card-icon">🧾</div>
+		<h3>스키마는 자유롭게</h3>
+		<p>Zod, Valibot, ArkType — Standard Schema 형태라면 무엇이든 그대로 쓸 수 있어요.</p>
+	</div>
+</div>

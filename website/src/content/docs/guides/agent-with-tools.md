@@ -1,5 +1,5 @@
 ---
-title: "Guide: an agent with tools"
+title: An agent with tools
 description: Build an agent that calls tools — and pass a sub-agent into its tools array to see composition for free.
 ---
 
