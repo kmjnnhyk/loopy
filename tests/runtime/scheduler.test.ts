@@ -3,7 +3,7 @@ import { END } from "loopy";
 import { runThread, RunSuspended, type Driver, type RunnableNode } from "../../src/runtime/scheduler";
 import { rawChannel } from "../../src/runtime/channels";
 import { memoryStore } from "../../src/runtime/store";
-import { threadId } from "../../src/runtime/events";
+import { threadId, type Event, type ThreadId } from "../../src/runtime/events";
 import { makeCtx, type RuntimeCtx } from "../../src/runtime/effects";
 
 // toy 2-node driver: a(tool 실행) → b(interrupt) → END
@@ -105,5 +105,71 @@ describe("runThread", () => {
     const log = await store.readLog(threadId("t5"));
     expect(log[log.length - 1]!.type).toBe("RunErrored");
     expect((await store.load(threadId("t5")))?.snapshot?.status).toBe("error");
+  });
+
+  test("RunEnded write failure surfaces as the store error, not RunErrored", async () => {
+    const inner = memoryStore();
+    const store = {
+      ...inner,
+      async appendEvents(t: ThreadId, es: readonly Event[]): Promise<void> {
+        if (es.some((e) => e.type === "RunEnded")) throw new Error("disk full");
+        return inner.appendEvents(t, es);
+      },
+    };
+    const c = { aTool: 0 };
+    await runThread({ driver: toyDriver(c), store, threadId: "t6", entry: "toy", input: { n: 3 } }).catch((e) => {
+      if (!(e instanceof RunSuspended)) throw e;
+    });
+    await expect(
+      runThread({ driver: toyDriver(c), store, threadId: "t6", entry: "toy", resume: { value: { approved: true } } }),
+    ).rejects.toThrow("disk full");
+    const types = (await inner.readLog(threadId("t6"))).map((e) => e.type);
+    expect(types).not.toContain("RunErrored"); // store 에러가 도메인 에러로 둔갑하지 않음
+  });
+
+  test("domain error survives store failure during RunErrored recording", async () => {
+    const inner = memoryStore();
+    let failing = false;
+    const store = {
+      ...inner,
+      async appendEvents(t: ThreadId, es: readonly Event[]): Promise<void> {
+        if (failing) throw new Error("disk full");
+        return inner.appendEvents(t, es);
+      },
+    };
+    const d = toyDriver({ aTool: 0 });
+    const boom: RunnableNode = {
+      reads: () => null,
+      run: async () => { failing = true; throw new RangeError("bad state"); },
+    };
+    d.node = () => boom;
+    await expect(runThread({ driver: d, store, threadId: "t7", entry: "toy", input: { n: 1 } })).rejects.toThrow("bad state");
+  });
+
+  test("errored thread cannot be re-run", async () => {
+    const store = memoryStore();
+    const d = toyDriver({ aTool: 0 });
+    const boom: RunnableNode = { reads: () => null, run: async () => { throw new RangeError("nope"); } };
+    d.node = () => boom;
+    await runThread({ driver: d, store, threadId: "t8", entry: "toy", input: { n: 1 } }).catch(() => {});
+    await expect(
+      runThread({ driver: d, store, threadId: "t8", entry: "toy", input: { n: 1 } }),
+    ).rejects.toThrow("already exists");
+  });
+
+  test("resume recovers pending from the log when the snapshot was never saved (crash mode ①)", async () => {
+    const inner = memoryStore();
+    // save가 조용히 사라짐 — InterruptRaised는 로그에 남았지만 suspended snapshot 저장 전 크래시
+    const crashy = { ...inner, async save(): Promise<void> {} };
+    const c = { aTool: 0 };
+    await runThread({ driver: toyDriver(c), store: crashy, threadId: "t9", entry: "toy", input: { n: 3 } }).catch((e) => {
+      if (!(e instanceof RunSuspended)) throw e;
+    });
+    expect((await inner.load(threadId("t9")))?.snapshot).toBeNull(); // 스냅샷 부재 확인
+    const out = await runThread({
+      driver: toyDriver(c), store: inner, threadId: "t9", entry: "toy", resume: { value: { approved: true } },
+    });
+    expect(out).toEqual({ done: true });
+    expect(c.aTool).toBe(1); // 로그 복구 resume에서도 effect는 replay
   });
 });

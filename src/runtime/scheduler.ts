@@ -134,17 +134,32 @@ export interface RunOptions {
   resume?: { value: unknown };
 }
 
+/** 크래시 모드 ①: InterruptRaised는 로그에 남았지만 suspended snapshot 저장 전에 크래시한
+ *  스레드 — 로그가 유일한 권위이므로 snapshot 없이도 로그에서 pending을 복구한다. */
+function derivePendingFromLog(events: readonly Event[]): { effectId: number; resumeKey: string; payload: unknown } | null {
+  const resumed = new Set<string>();
+  for (const e of events) if (e.type === "Resumed") resumed.add(e.resumeKey);
+  for (let i = events.length - 1; i >= 0; i--) {
+    const e = events[i]!;
+    if (e.type === "InterruptRaised" && !resumed.has(e.resumeKey))
+      return { effectId: e.effectId, resumeKey: e.resumeKey, payload: e.payload };
+  }
+  return null;
+}
+
 export async function runThread(o: RunOptions): Promise<unknown> {
   const tid: ThreadId = mkThreadId(o.threadId);
   const loaded = await o.store.load(tid);
   let events: readonly Event[] = loaded?.events ?? [];
   const snapshot = loaded?.snapshot ?? null;
 
+  let pending: { readonly effectId: number; readonly resumeKey: string; readonly payload: unknown } | null = null;
   if (o.resume) {
-    if (!snapshot || snapshot.status !== "suspended" || !snapshot.pending)
-      throw new Error(`resume("${o.threadId}"): thread is not suspended`);
-  } else if (events.length > 0 && snapshot?.status !== "error") {
-    throw new Error(`run("${o.threadId}"): thread already exists — use resume or a fresh threadId`);
+    pending = snapshot?.status === "suspended" && snapshot.pending ? snapshot.pending : derivePendingFromLog(events);
+    if (!pending) throw new Error(`resume("${o.threadId}"): thread is not suspended`);
+  } else if (events.length > 0) {
+    // v1: errored 스레드 재실행 불가 — 로그는 감사용 보존, 복구는 새 threadId.
+    throw new Error(`run("${o.threadId}"): thread already exists — resume it or use a fresh threadId`);
   }
 
   const rid = events[0]?.runId ?? mkRunId(`${o.threadId}#run`);
@@ -153,7 +168,7 @@ export async function runThread(o: RunOptions): Promise<unknown> {
 
   if (o.resume) {
     const resumed = await session.write({
-      type: "Resumed", resumeKey: snapshot!.pending!.resumeKey, value: o.resume.value, node: "",
+      type: "Resumed", resumeKey: pending!.resumeKey, value: o.resume.value, node: "",
     });
     events = [...events, resumed];
   } else {
@@ -166,21 +181,26 @@ export async function runThread(o: RunOptions): Promise<unknown> {
     deps: o.deps ?? {}, models: o.models ?? {},
   };
 
+  let output: unknown;
   try {
-    const output = await runGraph(o.driver, "", k, o.input);
-    await session.write({ type: "RunEnded", output, node: "" });
-    await o.store.save(tid, { status: "done", cursor: session.lastWritten() });
-    return output;
+    output = await runGraph(o.driver, "", k, o.input);
   } catch (err) {
     if (isSuspend(err)) {
       await o.store.save(tid, {
         status: "suspended", cursor: session.lastWritten(),
         pending: { effectId: err.effectId, resumeKey: err.resumeKey, payload: err.payload },
-      });
+      }); // 저장 실패 시 그대로 전파 — 지속되지 않은 suspend를 RunSuspended로 거짓 보고하지 않음
       throw new RunSuspended(o.threadId, err.payload, err.resumeKey);
     }
-    await session.write({ type: "RunErrored", error: serializeError(err), node: "" });
-    await o.store.save(tid, { status: "error", cursor: session.lastWritten() });
+    try {
+      await session.write({ type: "RunErrored", error: serializeError(err), node: "" });
+      await o.store.save(tid, { status: "error", cursor: session.lastWritten() });
+    } catch {
+      // store failure while recording the failure — surface the original domain error
+    }
     throw err;
   }
+  await session.write({ type: "RunEnded", output, node: "" });
+  await o.store.save(tid, { status: "done", cursor: session.lastWritten() });
+  return output;
 }
