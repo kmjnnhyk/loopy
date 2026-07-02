@@ -1,5 +1,7 @@
 import type { Checkpointer } from "./store";
+import { digest, posKey, serializeError } from "./events";
 import type { Event, EventBody, RunId, SerializedError, ThreadId } from "./events";
+import type { ModelClient, ModelRequest, ModelResponse } from "./model";
 
 export interface EffectMemoEntry {
   readonly argsDigest: string;
@@ -147,4 +149,168 @@ export class EventSession {
       resolve(event);
     }
   }
+}
+
+export class Suspend {
+  readonly kind = "loopy.suspend";
+  constructor(
+    readonly effectId: number,
+    readonly resumeKey: string,
+    readonly payload: unknown,
+  ) {}
+}
+export function isSuspend(x: unknown): x is Suspend {
+  return typeof x === "object" && x !== null && (x as { kind?: unknown }).kind === "loopy.suspend";
+}
+
+export class ReplayDivergence extends Error {
+  constructor(
+    readonly pos: string,
+    readonly expected: string,
+    readonly actual: string,
+  ) {
+    super(`replay divergence at ${pos}: recorded args digest ${expected}, replay produced ${actual}`);
+    this.name = "ReplayDivergence";
+  }
+}
+
+export function deserializeError(e: SerializedError): Error {
+  const err = new Error(e.message);
+  err.name = e.name;
+  return err;
+}
+
+export function pickDeps(deps: Record<string, unknown>, keys?: readonly string[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const k of keys ?? []) out[k] = deps[k];
+  return out;
+}
+
+export interface ToolLike {
+  readonly name: string;
+  readonly run: (input: never, ctx: never) => Promise<unknown>;
+  readonly "~depKeys"?: readonly string[];
+}
+
+export interface RuntimeCtx {
+  readonly deps: Record<string, unknown>;
+  callModel(client: ModelClient, req: ModelRequest): Promise<ModelResponse>;
+  callTool(tool: ToolLike, args: unknown): Promise<unknown>;
+  interrupt<T>(payload: unknown): Promise<T>;
+  sleep(ms: number): Promise<void>;
+  now(): number;
+  random(): number;
+}
+
+export function makeCtx(o: {
+  scope: string;
+  session: EventSession;
+  memo: Memo;
+  deps: Record<string, unknown>;
+}): RuntimeCtx {
+  let ordinal = 0;
+  const nextPos = (op: string): string => posKey(o.scope, ordinal++, op);
+
+  async function effect<T>(
+    op: string,
+    args: unknown,
+    writeCalled: (effectId: number, pos: string, argsDigest: string) => Promise<unknown>,
+    io: () => Promise<T>,
+    returnedType: "ToolReturned" | "ModelCallReturned",
+  ): Promise<T> {
+    const pos = nextPos(op); // sync — source-order determinism
+    const argsDigest = digest(args);
+    const hit = o.memo.effect(pos);
+    if (hit?.result) {
+      if (hit.argsDigest !== argsDigest) throw new ReplayDivergence(pos, hit.argsDigest, argsDigest);
+      if (hit.result.ok) return hit.result.value as T;
+      throw deserializeError(hit.result.error!);
+    }
+    // miss OR dangling call (crash mid-effect / suspend mid-tool) → (re-)issue: at-least-once
+    const effectId = o.session.reserve();
+    await writeCalled(effectId, pos, argsDigest);
+    try {
+      const value = await io();
+      await o.session.write({ type: returnedType, effectId, ok: true, value, node: o.scope });
+      return value;
+    } catch (err) {
+      if (isSuspend(err)) throw err; // control signal — never record as failure
+      await o.session.write({ type: returnedType, effectId, ok: false, error: serializeError(err), node: o.scope });
+      throw err;
+    }
+  }
+
+  const ctx: RuntimeCtx = {
+    deps: o.deps,
+
+    callModel(client: ModelClient, req: ModelRequest): Promise<ModelResponse> {
+      return effect(
+        "model",
+        req,
+        (effectId, pos, argsDigest) =>
+          o.session.writeReserved(effectId, { type: "ModelCallRequested", effectId, posKey: pos, argsDigest, req, node: o.scope }),
+        () => client.complete(req),
+        "ModelCallReturned",
+      );
+    },
+
+    callTool(tool: ToolLike, args: unknown): Promise<unknown> {
+      return effect(
+        `tool:${tool.name}`,
+        args,
+        (effectId, pos, argsDigest) =>
+          o.session.writeReserved(effectId, { type: "ToolCalled", effectId, posKey: pos, argsDigest, tool: tool.name, args, node: o.scope }),
+        () => {
+          const toolCtx = {
+            deps: pickDeps(o.deps, tool["~depKeys"]),
+            interrupt: <T>(payload: unknown): Promise<T> => ctx.interrupt<T>(payload),
+          };
+          return (tool.run as (i: unknown, c: unknown) => Promise<unknown>)(args, toolCtx);
+        },
+        "ToolReturned",
+      );
+    },
+
+    async interrupt<T>(payload: unknown): Promise<T> {
+      const pos = nextPos("interrupt");
+      const resumed = o.memo.resume(pos); // resumeKey IS the position key — stable across re-entry
+      if (resumed.found) return resumed.value as T;
+      const effectId = o.session.reserve();
+      await o.session.writeReserved(effectId, {
+        type: "InterruptRaised", effectId, posKey: pos, payload, resumeKey: pos, node: o.scope,
+      });
+      throw new Suspend(effectId, pos, payload);
+    },
+
+    async sleep(ms: number): Promise<void> {
+      const pos = nextPos("sleep");
+      const hit = o.memo.effect(pos);
+      if (hit?.result) return; // replay: instant
+      const effectId = o.session.reserve();
+      await o.session.writeReserved(effectId, { type: "SleepScheduled", effectId, posKey: pos, ms, node: o.scope });
+      await new Promise<void>((r) => setTimeout(r, ms));
+      await o.session.write({ type: "TimerFired", effectId, node: o.scope });
+    },
+
+    now(): number {
+      const pos = nextPos("now");
+      const hit = o.memo.effect(pos);
+      if (hit?.result) return hit.result.value as number;
+      const effectId = o.session.reserve();
+      const value = Date.now();
+      void o.session.writeReserved(effectId, { type: "NowRead", effectId, posKey: pos, value, node: o.scope });
+      return value;
+    },
+
+    random(): number {
+      const pos = nextPos("random");
+      const hit = o.memo.effect(pos);
+      if (hit?.result) return hit.result.value as number;
+      const effectId = o.session.reserve();
+      const value = Math.random();
+      void o.session.writeReserved(effectId, { type: "RandomRead", effectId, posKey: pos, value, node: o.scope });
+      return value;
+    },
+  };
+  return ctx;
 }
