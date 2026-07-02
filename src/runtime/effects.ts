@@ -77,9 +77,11 @@ export class Memo {
 
 export class EventSession {
   private seq: number;
-  private pendingWrites = new Map<number, { body: EventBody & { node: string }; resolve: (e: Event) => void }>();
+  private pendingWrites = new Map<number, { body: EventBody & { node: string }; resolve: (e: Event) => void; reject: (err: unknown) => void }>();
   private nextToFlush: number;
   private chain: Promise<void> = Promise.resolve();
+  /** first store failure — once set, the session is dead and every write rejects with it */
+  private failure: unknown = null;
 
   constructor(
     private store: Checkpointer,
@@ -106,18 +108,36 @@ export class EventSession {
 
   /** persists in strict seq order regardless of arrival order of concurrent effects */
   writeReserved(seq: number, body: EventBody & { node: string }): Promise<Event> {
-    return new Promise<Event>((resolve) => {
-      this.pendingWrites.set(seq, { body, resolve });
+    return new Promise<Event>((resolve, reject) => {
+      if (this.failure !== null) {
+        reject(this.failure);
+        return;
+      }
+      this.pendingWrites.set(seq, { body, resolve, reject });
       this.chain = this.chain.then(() => this.flush());
     });
   }
 
   private async flush(): Promise<void> {
     while (this.pendingWrites.has(this.nextToFlush)) {
-      const { body, resolve } = this.pendingWrites.get(this.nextToFlush)!;
-      this.pendingWrites.delete(this.nextToFlush);
+      const { body, resolve, reject } = this.pendingWrites.get(this.nextToFlush)!;
       const event = { ...body, seq: this.nextToFlush, threadId: this.tid, runId: this.rid, ts: new Date().toISOString() } as Event;
-      await this.store.appendEvents(this.tid, [event]);
+      try {
+        await this.store.appendEvents(this.tid, [event]);
+      } catch (err) {
+        // fail loud: first store failure kills the session — reject this write,
+        // everything queued behind it, and (via `failure`) every future write.
+        // the chain itself stays resolved so it never becomes an unhandled rejection.
+        this.failure = err;
+        this.pendingWrites.delete(this.nextToFlush);
+        reject(err);
+        for (const [seq, w] of this.pendingWrites) {
+          this.pendingWrites.delete(seq);
+          w.reject(err);
+        }
+        return;
+      }
+      this.pendingWrites.delete(this.nextToFlush);
       this.nextToFlush++;
       try {
         this.onEvent?.(event);

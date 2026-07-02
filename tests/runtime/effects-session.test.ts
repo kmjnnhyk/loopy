@@ -21,6 +21,39 @@ describe("EventSession", () => {
     expect(log.map((e) => e.seq)).toEqual([0, 1]);
     expect(seen).toEqual([0, 1]); // onEvent fires in order too
   });
+
+  test("store failure rejects the write and fails the session loudly", async () => {
+    const broken = {
+      ...memoryStore(),
+      async appendEvents(): Promise<void> {
+        throw new Error("disk full");
+      },
+    };
+    const s = new EventSession(broken, T, R, 0);
+    await expect(s.write({ type: "StepStarted", node: "" })).rejects.toThrow("disk full");
+    // session is failed: later writes reject with the same error instead of hanging
+    await expect(s.write({ type: "StepEnded", node: "" })).rejects.toThrow("disk full");
+  });
+
+  test("queued writes behind a failure are rejected too", async () => {
+    const broken = {
+      ...memoryStore(),
+      async appendEvents(): Promise<void> {
+        throw new Error("disk full");
+      },
+    };
+    const s = new EventSession(broken, T, R, 0);
+    const a = s.reserve(); // 0
+    const b = s.reserve(); // 1
+    const pb = s.writeReserved(b, { type: "StepEnded", node: "" }); // queued behind a
+    const pa = s.writeReserved(a, { type: "StepStarted", node: "" }); // fails first
+    // allSettled attaches handlers to both up front (no unhandled-rejection window)
+    const [ra, rb] = await Promise.allSettled([pa, pb]);
+    expect(ra.status).toBe("rejected");
+    expect(rb.status).toBe("rejected");
+    expect((ra as PromiseRejectedResult).reason).toEqual(new Error("disk full"));
+    expect((rb as PromiseRejectedResult).reason).toEqual(new Error("disk full"));
+  });
 });
 
 describe("Memo.fromEvents", () => {
