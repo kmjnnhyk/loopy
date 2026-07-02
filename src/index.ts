@@ -18,6 +18,10 @@ export interface LoopyDeps {}
 /** A tool's run-context: only the *declared* slice of deps, nothing else. */
 export interface ToolCtx<D extends keyof LoopyDeps> {
   readonly deps: Pick<LoopyDeps, D>;
+  /** HITL: suspend the run; resolves with the typed resume value. Exposed on the
+   *  tool ctx so a declarative (bodyless) agent can request approval via a tool
+   *  (spec §7 / §12c — a controlled extension of the locked ToolCtx). */
+  interrupt<T>(payload: unknown): Promise<T>;
 }
 
 /** An agent's run-context (loop-owner; same dep slice). */
@@ -168,12 +172,15 @@ export interface Agent<
   Out extends IO<any, any>,
   Deps extends keyof LoopyDeps,
   Tools extends readonly AnyStep[] = readonly AnyStep[],
+  Pass extends string = never,
 > extends Step<Name, In, Out, Deps> {
   readonly "~kind": "agent";
   readonly model: string;
   /** the concrete tool tuple is PRESERVED (not widened to AnyStep[]) so a
    *  consumer's `ToolDepKeys<typeof agent.tools>` stays precise across .d.ts. */
   readonly tools: Tools;
+  /** phantom: union of declared passTo target NAMES (§6 candidate ii). */
+  readonly "~passTo"?: Pass;
   readonly run: (input: InferOut<In>, ctx: AgentCtx<Deps>) => Promise<InferOut<Out>>;
 }
 
@@ -183,6 +190,7 @@ export function agent<
   Out extends IO<any, any>,
   const Tools extends readonly AnyStep[] = [],
   const D extends readonly (keyof LoopyDeps)[] = [],
+  const Pass extends readonly string[] = [],
 >(def: {
   name: Name;
   model: string;
@@ -191,7 +199,8 @@ export function agent<
   output: Out;
   tools?: Tools & NoDuplicateTools<Tools>;
   deps?: D;
-}): Agent<Name, In, Out, D[number] | ToolDepKeys<Tools>, Tools> {
+  passTo?: Pass;
+}): Agent<Name, In, Out, D[number] | ToolDepKeys<Tools>, Tools, Pass[number]> {
   return {
     "~kind": "agent",
     name: def.name,
@@ -200,8 +209,19 @@ export function agent<
     output: def.output,
     tools: (def.tools ?? []) as Tools,
     run: undefined as never,
-  } as Agent<Name, In, Out, D[number] | ToolDepKeys<Tools>, Tools>;
+  } as Agent<Name, In, Out, D[number] | ToolDepKeys<Tools>, Tools, Pass[number]>;
 }
+
+/** ~passTo extractor — NonNullable (NOT a constrained infer; see Global Constraints). */
+export type PassToOf<A> = A extends { readonly "~passTo"?: infer P } ? NonNullable<P> : never;
+
+/** variadic upper bound for team agent records. */
+export type AnyAgent = Agent<string, IO<any, any>, IO<any, any>, keyof LoopyDeps, readonly AnyStep[], string>;
+
+/** P1: template-literal mapped type — the synthesized handoff tool manifest. */
+export type PassToolNames<Pass extends string> = {
+  readonly [N in Pass as `pass_to_${N}`]: { readonly target: N };
+};
 
 /* ============================================================================
  * §5 — channels + workflow (two-phase .nodes().flow(); no forward-ref leak)
@@ -228,6 +248,27 @@ export function listChannel<T>(): Channel<readonly T[], T | readonly T[]> {
     initial: () => [],
   };
 }
+
+/** Run-input seed channel: no initial (provided at run). BRANDED so `TeamInputOf`
+ *  can distinguish it from `lastChannel` (both are `Channel<T,T>` otherwise —
+ *  the init is a runtime field, invisible to the type system). See spec §4. */
+export interface InputChannel<T> extends Channel<T, T> {
+  readonly "~input": true;
+}
+export function inputChannel<T>(): InputChannel<T> {
+  return {
+    "~value": undefined as never,
+    "~update": undefined as never,
+    reduce: (_c, u) => u,
+    initial: (() => undefined) as never, // seeded at run; no static init
+    "~input": true,
+  };
+}
+/** select only the ~input-branded channels → the team's run-input shape. */
+export type TeamInputOf<State> = {
+  readonly [K in keyof State as State[K] extends InputChannel<any> ? K : never]:
+    State[K] extends InputChannel<infer T> ? T : never;
+};
 
 export const END: "~end" = "~end";
 export type END = typeof END;
@@ -352,13 +393,20 @@ export interface Runtime<Reg> {
 
 /** deps fully supplied here → directly runnable. (negative②: a missing dep
  *  errors as TS2741 "Property 'x' is missing … in Pick<LoopyDeps, …>".) */
-export function defineLoopy<const A extends Record<string, AnyEntry>, const W extends Record<string, AnyEntry>>(def: {
+export function defineLoopy<
+  const A extends Record<string, AnyEntry>,
+  const W extends Record<string, AnyEntry>,
+  const T extends Record<string, AnyEntry> = {},
+>(def: {
   agents: A;
+  // A↔W collision stays guarded HERE (not on the optional teams param) so it is
+  // enforced even when teams is omitted; teams collides against agents+workflows.
   workflows: W & NoKeyCollision<A, W>;
-  deps: Pick<LoopyDeps, RequiredDeps<A & W>>;
-}): Runtime<A & W> {
+  teams?: T & NoKeyCollision<A & W, T>;
+  deps: Pick<LoopyDeps, RequiredDeps<A & W & T>>;
+}): Runtime<A & W & T> {
   void def;
-  return { run: (async () => undefined as never) as RunFn<A & W> };
+  return { run: (async () => undefined as never) as RunFn<A & W & T> };
 }
 
 /* ============================================================================
@@ -388,4 +436,157 @@ export function loopy<const A extends Record<string, AnyEntry>, const W extends 
     A & W,
     RequiredDeps<A & W>
   >;
+}
+
+/* ============================================================================
+ * §8 — team (multi-agent v1). A thin opinionated preset over workflow: agents
+ *      as nodes + a shared transcript + a nextAgent control channel + passTo
+ *      name-capture sugar. Reuses workflow's router/State machinery (spec §2).
+ *      Three small NEW type surfaces: passTo↔membership guard, inputChannel,
+ *      tool-ctx interrupt. Runtime (control loop / consume-on-read / replay) is
+ *      Plan B — every body here stays stubbed like the rest of the skeleton.
+ * ========================================================================== */
+
+/** shared conversation message (minimal). transcript = listChannel<Msg>(). */
+export interface Msg {
+  readonly role: "user" | "assistant" | "tool";
+  readonly agent?: string;
+  readonly content: string;
+}
+export type AgentNames<Agents> = Extract<keyof Agents, string>;
+
+/** team auto-injected channels: shared transcript (append) + nextAgent (control,
+ *  init = entry at runtime, consumed each turn — runtime concern, Plan B). */
+export type TeamAutoState<Names extends string> = {
+  readonly transcript: Channel<readonly Msg[], Msg | readonly Msg[]>;
+  readonly nextAgent: Channel<Names | null, Names | null>;
+};
+export type TeamFullState<State, Names extends string> = State & TeamAutoState<Names>;
+
+/** per-slot membership guard: an agent whose passTo targets are all members of
+ *  the team's agent set passes through UNCHANGED; a stray target brands ONLY
+ *  that slot with a `never`-missing error field naming the stray. (Spec §6 ii /
+ *  Appendix B — compiled under tsc 6.0.3; reviewer with no passTo → PassToOf =
+ *  never → [never] extends [never] → passes.) The two §2.x disciplines are
+ *  load-bearing: PassToOf uses NonNullable (NOT a constrained infer), and the
+ *  gate is the tuple-wrap [Exclude<…>] extends [never] (NOT a naked X extends never). */
+export type GuardAgents<Agents> = {
+  [K in keyof Agents]:
+    [Exclude<PassToOf<Agents[K]>, Extract<keyof Agents, string>>] extends [never]
+      ? Agents[K]
+      : {
+          readonly "~passToTargetNotInTeam":
+            Exclude<PassToOf<Agents[K]>, Extract<keyof Agents, string>>;
+        };
+};
+
+/** router return = every agent key + END → inherited from workflow's .branch
+ *  surface (a stray key errors TS2820). Independent of the passTo guard (§6). */
+export type TeamRouterReturn<Agents> = AgentNames<Agents> | END;
+
+/** union of every dep required across the team's agents — mirrors §5 NodeDepKeys.
+ *  passTo synthesis contributes no deps, so this is exactly the agents' deps. Kept
+ *  tight (NOT the broad keyof LoopyDeps) so RequiredDeps over a team registry
+ *  converges to the real dep set (P7), not "every dep". */
+export type TeamDeps<Agents> = NonNullable<
+  { [K in keyof Agents]: Agents[K] extends { readonly "~deps"?: infer D } ? D : never }[keyof Agents]
+> &
+  keyof LoopyDeps;
+
+export interface Team<Name extends string, Agents, State, Result> {
+  readonly "~kind": "team";
+  readonly name: Name;
+  readonly entry: AgentNames<Agents>;
+  readonly agents: Agents;
+  readonly state: TeamFullState<State, AgentNames<Agents>>;
+  readonly maxTurns?: number;
+  // AnyEntry-compatible surface for defineLoopy (Task 8): run input from
+  // inputChannel channels; run output = the single .writes-mapped channel value.
+  readonly input: IO<TeamInputOf<State>>;
+  readonly output: IO<Result>;
+  readonly "~deps"?: TeamDeps<Agents>;
+}
+
+/** a channel's stored value type. */
+export type ChannelValueOf<C> = C extends Channel<infer V, any> ? V : never;
+
+/** per-mapping output⊑channel check: for each `{ agent: channel }` entry, the
+ *  agent's output must be assignable to the channel's value type, else that slot
+ *  is branded with a `never`-missing error naming the mismatch (spec §4/§6 — the
+ *  `.writes` boundary is where "output ⊑ channel" is compile-checked). The
+ *  tuple-wrap [Out] extends [ChVal] avoids union distribution. */
+export type WritesOutputCheck<Agents, State, M> = {
+  [A in keyof M]: A extends keyof Agents
+    ? M[A] extends infer Ch
+      ? Ch extends keyof State
+        ? [OutputOf<Agents[A]>] extends [ChannelValueOf<State[Ch]>]
+          ? M[A]
+          : {
+              readonly "~agentOutputNotAssignableToChannel": {
+                readonly agent: A;
+                readonly channel: Ch;
+                readonly output: OutputOf<Agents[A]>;
+                readonly channelValue: ChannelValueOf<State[Ch]>;
+              };
+            }
+        : M[A]
+      : M[A]
+    : M[A];
+};
+
+/** .writes maps an agent name → a state channel key (its output is written there).
+ *  Result = the value type of the single mapped channel (Task 8 uses it for run). */
+export interface TeamBuilder<Name extends string, Agents, State> {
+  writes<const M extends Partial<Record<AgentNames<Agents>, keyof State>>>(
+    map: M & WritesOutputCheck<Agents, State, M>,
+  ): TeamRouted<Name, Agents, State, M>;
+  router(
+    fn: (s: StateOf<TeamFullState<State, AgentNames<Agents>>>) => TeamRouterReturn<Agents>,
+  ): Team<Name, Agents, State, unknown>;
+}
+
+export interface TeamRouted<Name extends string, Agents, State, M> {
+  router(
+    fn: (s: StateOf<TeamFullState<State, AgentNames<Agents>>>) => TeamRouterReturn<Agents>,
+  ): Team<Name, Agents, State, WritesResult<State, M>>;
+}
+
+/** true iff U is a union of 2+ members (single member or never → false). */
+type IsUnion<U, C = U> = [U] extends [never]
+  ? false
+  : U extends unknown
+    ? [C] extends [U] ? false : true
+    : never;
+
+/** exactly one mapping → that channel's value type; 0 or >1 → full state snapshot
+ *  (no silent single-channel pick — spec §4). The single-vs-multiple split is a
+ *  union-cardinality test on keyof M (the plan's `{[K]:0}[keyof M] extends 0`
+ *  sketch is always true regardless of key count → replaced with IsUnion). */
+export type WritesResult<State, M> =
+  [keyof M] extends [never]
+    ? StateOf<State>
+    : IsUnion<keyof M> extends true
+      ? StateOf<State>
+      : M[keyof M] extends infer Ch
+        ? Ch extends keyof State
+          ? State[Ch] extends Channel<infer V, any> ? V : never
+          : never
+        : never;
+
+export function team<
+  const Name extends string,
+  const Agents extends Record<string, AnyAgent>,
+  State extends Record<string, Channel<any, any>>,
+>(def: {
+  name: Name;
+  entry: AgentNames<Agents>;
+  state: State;
+  agents: Agents & GuardAgents<Agents>;
+  maxTurns?: number;
+}): TeamBuilder<Name, Agents, State> {
+  void def;
+  return {
+    writes: (() => ({ router: () => undefined as never })) as never,
+    router: (() => undefined as never) as never,
+  } as TeamBuilder<Name, Agents, State>;
 }
