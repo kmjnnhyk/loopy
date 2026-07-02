@@ -807,3 +807,4 @@ export { AgentMaxStepsError } from "./runtime/drivers/agent";
 export { TeamMaxTurnsError } from "./runtime/drivers/team";
 export { ParseError } from "./runtime/sap";
 export type { Event as RuntimeEvent, ThreadId, RunId } from "./runtime/events";
+export { verifyReplay } from "./runtime/verify";
