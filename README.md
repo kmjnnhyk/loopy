@@ -13,12 +13,13 @@ Everything reduces to one primitive: a `Step<Name, In, Out, Deps>`.
 ---
 
 > [!IMPORTANT]
-> **loopy is in the design / prototype phase.** This repository is a fully
-> type-checked **type surface** — `src/index.ts` is a skeleton whose runtime
-> bodies are intentionally stubbed. The library is validated today by TypeScript
-> **compile-assertions** and hand-read `.d.ts` emit, not by executing code. The
-> runtime (control loop, event-sourced replay, human-in-the-loop execution) is
-> the next milestone. See [Status & roadmap](#status--roadmap).
+> **loopy is early and pre-1.0.** Both the type surface (`tool` / `agent` /
+> `workflow` / `team`, the registry, end-to-end inference) and the **runtime** —
+> an event-sourced kernel with one path for fresh / replay / resume, workflow /
+> agent / team drivers, human-in-the-loop suspend & resume, an Anthropic adapter,
+> and record→replay testing (`loopy/test`) — are implemented and exercised by the
+> test suite. The public API may still shift and the docs site is a work in
+> progress. See [Status & roadmap](#status--roadmap).
 
 ## Why loopy
 
@@ -121,16 +122,20 @@ progressive-injection variant whose `run` unlocks only once nothing is missing.
 
 ## Status & roadmap
 
-loopy is being built **type-surface first**: the compile-time contract is locked
-and proven before any runtime is written.
+loopy was built **type-surface first** — the compile-time contract was locked and
+proven before the runtime, so the runtime had a fixed target to hit.
 
 - ✅ **Type surface** — `tool` / `agent` / `workflow` / `team`, channels, the
   registry, dependency convergence, and the `team` multi-agent surface (passTo
   membership guard, `inputChannel` brand, HITL tool-ctx `interrupt`). Proven by
   compile-assertions (`examples/*-consumer.ts`), must-error fixtures
   (`examples/_negative.ts`), and hand-read `.d.ts` under `isolatedDeclarations`.
-- 🚧 **Runtime** — the control loop, event-sourced replay, `passTo` consumption,
-  and HITL execution. Not yet implemented (bodies are stubbed `undefined as never`).
+- ✅ **Runtime** — an event-sourced kernel (one path for fresh / replay / resume),
+  workflow / agent / team drivers, `passTo` consumption, human-in-the-loop suspend
+  & resume, and an Anthropic model adapter. Exercised end-to-end by the test suite.
+- ✅ **Record→replay testing** (`loopy/test`) — record a run once as a golden log,
+  then re-run only your orchestration code against the memoized effects (0 LLM
+  calls), reporting the first divergence (see Testing, below).
 - 🔭 **Later** — parallel/concurrent agents, nested teams, typed error channels.
 
 ## Documentation
@@ -164,9 +169,15 @@ the run input. A timestamp / UUID / random id placed *into* an effect's argument
 every run and will surface as a replay divergence — that is the harness detecting author
 impurity, not a false positive. (v1 has no masking.)
 
-## Verifying the type surface
+## Verifying
 
-There is no test runner — the "tests" are TypeScript compile checks:
+Two gate layers. The runtime test suite:
+
+```bash
+bun test                      # runtime + harness: event sourcing, drivers, HITL, replay
+```
+
+…and the TypeScript compile checks:
 
 ```bash
 tsc -p tsconfig.json          # maintainer gate: src only, isolatedDeclarations ON
