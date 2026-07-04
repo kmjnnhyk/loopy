@@ -8,6 +8,9 @@ export interface ReplayCtx {
 export interface ReplayFixtureOpts {
   readonly dir: string;
   readonly update?: boolean;
+  /** golden file identity. Defaults to the entry name passed to replay(); defineLoopyTest
+   *  sets it to the TEST name so each test owns one golden (one replay per test). */
+  readonly goldenKey?: string;
 }
 
 /** testable record-or-replay core (no bun:test coupling). */
@@ -20,7 +23,7 @@ export function replayFixture(runtime: Runtime<any>, opts: ReplayFixtureOpts): R
 
   return {
     async replay(name, input): Promise<{ output: unknown }> {
-      const path = goldenPath(opts.dir, name);
+      const path = goldenPath(opts.dir, opts.goldenKey ?? name);
       if (update || !goldenExists(path)) {
         const events = await handle.record(name, input);
         writeGolden(path, { entry: name, input, events });
@@ -44,7 +47,7 @@ export function defineLoopyTest(
 ): { test: (name: string, fn: (t: ReplayCtx) => unknown | Promise<unknown>) => void } {
   return {
     test(name, fn) {
-      const fixture = replayFixture(runtime, { dir: opts.dir });
+      const fixture = replayFixture(runtime, { dir: opts.dir, goldenKey: name });
       bunTest(name, async () => {
         await fn(fixture);
       });

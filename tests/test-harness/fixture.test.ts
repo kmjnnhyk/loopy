@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { rmSync } from "node:fs";
-import { defineLoopy, stubModel, workflow, step, node, io, lastChannel, END, ReplayDivergence } from "loopy";
+import { defineLoopy, workflow, step, node, io, lastChannel, END, ReplayDivergence } from "loopy";
 import { replayFixture } from "../../src/test";
 import { goldenPath, goldenExists } from "../../src/test/golden";
 
@@ -67,6 +67,18 @@ test("update:true re-records even when a (stale) golden exists", async () => {
     // subsequent plain replay of the variant is now green
     const r2 = await replayFixture(mkRuntime(true), { dir: TMP }).replay("toy", { n: 5 });
     expect(r2.output).toEqual({ n: 210 });
+  } finally {
+    cleanup();
+  }
+});
+
+test("goldenKey decouples the golden file from the dispatch entry name", async () => {
+  cleanup();
+  try {
+    // same entry "toy", but goldenKey routes the golden to a distinct file
+    await replayFixture(mkRuntime(false), { dir: TMP, goldenKey: "scenario-A" }).replay("toy", { n: 5 });
+    expect(goldenExists(goldenPath(TMP, "scenario-A"))).toBe(true);
+    expect(goldenExists(goldenPath(TMP, "toy"))).toBe(false); // NOT keyed by the entry name
   } finally {
     cleanup();
   }
