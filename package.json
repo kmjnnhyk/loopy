@@ -4,11 +4,19 @@
   "type": "module",
   "private": true,
   "description": "Type-safe internal TS DSL for LLM agents/tools/workflows — React for agents",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "emit": "tsc -p tsconfig.json",
-    "check": "tsc -p tsconfig.json --noEmit"
+    "check": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test"
   },
   "devDependencies": {
+    "@types/bun": "^1.3.14",
     "typescript": "^6"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0"
   }
 }

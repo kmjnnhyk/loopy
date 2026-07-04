@@ -7,6 +7,23 @@
 // return type so `isolatedDeclarations: true` passes and the emitted .d.ts keeps
 // the synthetic type *names* (no anonymous blobs). Internal const tables may use
 // `satisfies`; exported factory returns never do.
+//
+// ESM cycle note (Task 13): runtime/* modules import VALUES from this module
+// (END, lastChannel, …) and this module imports runtime VALUES back — a genuine
+// ESM cycle. Safe because both sides only ACCESS the cross-module values inside
+// function bodies (driver factories, defineLoopy/loopy call time), never at
+// module top-level evaluation. Type-only imports are unaffected either way.
+
+import { runThread as _runThread } from "./runtime/scheduler";
+import { workflowDriver } from "./runtime/drivers/workflow";
+import { agentDriver, agentNode } from "./runtime/drivers/agent";
+import { teamDriver } from "./runtime/drivers/team";
+import { memoryStore } from "./runtime/store";
+import type { Checkpointer } from "./runtime/store";
+import type { ModelClient } from "./runtime/model";
+import { threadId as mkThreadId } from "./runtime/events";
+import type { Event as RuntimeEvent } from "./runtime/events";
+import type { Driver } from "./runtime/scheduler";
 
 /* ============================================================================
  * §0 — Dependency registry (augmentable) + capability contexts
@@ -90,6 +107,8 @@ export interface Step<
   readonly output: Out;
   /** phantom dep-key union — the extraction target for ToolDepKeys / DepsOf. */
   readonly "~deps"?: Deps;
+  /** runtime dep-key array capture (Task 10) — consumed by the interpreter's ctx slicing. */
+  readonly "~depKeys"?: readonly string[];
   // FIX ① (completed): BOTH slots are `any`, not just the schema-derived input.
   // `ctx: unknown` would re-introduce the contravariant failure — top-type
   // `unknown` is not assignable to a concrete `ToolCtx<…>` in param position, so
@@ -138,6 +157,7 @@ export function tool<
     input: def.input,
     output: def.output,
     idempotencyKey: def.idempotencyKey,
+    "~depKeys": def.deps ?? [],
     run: def.run,
   } as Tool<Name, In, Out, D[number]>;
 }
@@ -176,11 +196,16 @@ export interface Agent<
 > extends Step<Name, In, Out, Deps> {
   readonly "~kind": "agent";
   readonly model: string;
+  readonly instructions: string;
+  readonly maxSteps?: number;
+  readonly parseRetries?: number;
   /** the concrete tool tuple is PRESERVED (not widened to AnyStep[]) so a
    *  consumer's `ToolDepKeys<typeof agent.tools>` stays precise across .d.ts. */
   readonly tools: Tools;
   /** phantom: union of declared passTo target NAMES (§6 candidate ii). */
   readonly "~passTo"?: Pass;
+  /** runtime passTo-name array capture (Task 10) — consumed by the interpreter. */
+  readonly "~passToNames"?: readonly string[];
   readonly run: (input: InferOut<In>, ctx: AgentCtx<Deps>) => Promise<InferOut<Out>>;
 }
 
@@ -200,14 +225,21 @@ export function agent<
   tools?: Tools & NoDuplicateTools<Tools>;
   deps?: D;
   passTo?: Pass;
+  maxSteps?: number;
+  parseRetries?: number;
 }): Agent<Name, In, Out, D[number] | ToolDepKeys<Tools>, Tools, Pass[number]> {
   return {
     "~kind": "agent",
     name: def.name,
     model: def.model,
+    instructions: def.instructions,
+    maxSteps: def.maxSteps,
+    parseRetries: def.parseRetries,
     input: def.input,
     output: def.output,
     tools: (def.tools ?? []) as Tools,
+    "~depKeys": def.deps ?? [],
+    "~passToNames": def.passTo ?? [],
     run: undefined as never,
   } as Agent<Name, In, Out, D[number] | ToolDepKeys<Tools>, Tools, Pass[number]>;
 }
@@ -273,6 +305,46 @@ export type TeamInputOf<State> = {
 export const END: "~end" = "~end";
 export type END = typeof END;
 
+/* ── workflow node binding (runtime spec §5 — additive) ───────────────────── */
+
+export interface NodeBinding<St extends AnyStep, W extends string = never> {
+  readonly "~binding": true;
+  readonly step: St;
+  /** state view → node input. v1 leak: source param is `any`; the RETURN is checked. */
+  readonly reads?: (s: any) => InferOut<St["input"]>;
+  readonly writes?: W;
+}
+
+export function node<St extends AnyStep, const W extends string = never>(
+  step: St,
+  binding: { reads?: (s: any) => InferOut<St["input"]>; writes?: W } = {},
+): NodeBinding<St, W> {
+  return { "~binding": true, step, reads: binding.reads, writes: binding.writes };
+}
+
+/** run-input auto channel: every node's reads/router sees `s.input`. */
+export type WorkflowView<State, In extends IO<any, any>> = StateOf<State> & { readonly input: InferOut<In> };
+
+/** per-slot guard: writes must name an existing channel AND output ⊑ channel value;
+ *  a bare Step (no binding) is allowed only when the full state view satisfies its input;
+ *  a value that is neither a Step nor a node() binding is branded "~nodeInvalid" —
+ *  this closes the gap left by nodes()'s loosened Record<string, unknown> bound. */
+export type BindingCheck<State, In extends IO<any, any>, N> = {
+  [K in keyof N]: N[K] extends NodeBinding<infer St, infer W>
+    ? [W] extends [never]
+      ? N[K]
+      : W extends keyof State
+        ? [InferOut<St["output"]>] extends [ChannelValueOf<State[W]>]
+          ? N[K]
+          : { readonly "~nodeOutputNotAssignableToChannel": { readonly node: K; readonly channel: W } }
+        : { readonly "~writesUnknownChannel": W }
+    : N[K] extends AnyStep
+      ? [WorkflowView<State, In>] extends [InferOut<N[K]["input"]>]
+        ? N[K]
+        : { readonly "~nodeNeedsReads": K }
+      : { readonly "~nodeInvalid": K };
+};
+
 /** A workflow node = any Step (tool / agent / inline step). */
 export function step<
   const Name extends string,
@@ -286,12 +358,13 @@ export function step<
   deps?: D;
   run: (input: InferOut<In>, ctx: NodeCtx<D[number]>) => Promise<InferOut<Out>>;
 }): Step<Name, In, Out, D[number]> {
-  return { name: def.name, input: def.input, output: def.output, run: def.run as never } as Step<
-    Name,
-    In,
-    Out,
-    D[number]
-  >;
+  return {
+    name: def.name,
+    input: def.input,
+    output: def.output,
+    "~depKeys": def.deps ?? [],
+    run: def.run as never,
+  } as Step<Name, In, Out, D[number]>;
 }
 
 export interface Workflow<
@@ -307,6 +380,8 @@ export interface Workflow<
   readonly input: In;
   readonly output: Out;
   readonly "~deps"?: Deps;
+  /** runtime graph capture (Task 10); type narrowed in the runtime module. */
+  readonly "~graph"?: unknown;
 }
 
 /** dep-union accumulated from every node in the workflow. */
@@ -321,23 +396,49 @@ export interface FlowBuilder<S, NodeName extends string> {
   branch(from: NodeName, router: (s: S) => NodeName | END): FlowBuilder<S, NodeName>;
 }
 
-export interface WorkflowNodes<
-  Name extends string,
-  State,
-  In extends IO<any, any>,
-  Out extends IO<any, any>,
-  NodeName extends string,
-  Deps extends keyof LoopyDeps,
-> {
-  flow(
-    build: (b: FlowBuilder<StateOf<State>, NodeName>) => FlowBuilder<StateOf<State>, NodeName>,
-  ): Workflow<Name, State, In, Out, Deps>;
+export interface WorkflowFlowed<
+  Name extends string, State, In extends IO<any, any>, Out extends IO<any, any>, Deps extends keyof LoopyDeps,
+> extends Workflow<Name, State, In, Out, Deps> {
+  returns(fn: (s: WorkflowView<State, In>) => InferOut<Out>): Workflow<Name, State, In, Out, Deps>;
 }
 
+export interface WorkflowNodes<
+  Name extends string, State, In extends IO<any, any>, Out extends IO<any, any>,
+  NodeName extends string, Deps extends keyof LoopyDeps,
+> {
+  flow(
+    build: (b: FlowBuilder<WorkflowView<State, In>, NodeName>) => FlowBuilder<WorkflowView<State, In>, NodeName>,
+  ): WorkflowFlowed<Name, State, In, Out, Deps>;
+}
+
+/** node 값에서 dep-키 추출 시 바인딩을 투과 (NodeDepKeys에 바인딩 언랩 추가). */
+export type UnwrapBinding<E> = E extends NodeBinding<infer St, any> ? St : E;
+
 export interface WorkflowInit<Name extends string, State, In extends IO<any, any>, Out extends IO<any, any>> {
-  nodes<const Nodes extends Record<string, AnyStep>>(
-    nodes: Nodes,
-  ): WorkflowNodes<Name, State, In, Out, Extract<keyof Nodes, string>, NodeDepKeys<Nodes>>;
+  // NOTE (deviation from brief): the constraint is `Record<string, unknown>`, not
+  // `Record<string, AnyStep | NodeBinding<AnyStep, string>>` as the brief specifies.
+  // With the tighter bound, TS's contextual instantiation feeds `NodeBinding<AnyStep,
+  // string>`'s `W = string` into each nested `node(...)` call as an inference candidate
+  // BEFORE the call's own (absent) `writes` argument is considered — an omitted `writes`
+  // then infers `W = string` instead of the documented default `never` (verified via an
+  // isolated repro; a bare `Record<string, unknown>` bound removes the leaking candidate
+  // and restores `W = never` for bare `node(step, { reads })` calls). Validation strength
+  // is unchanged: BindingCheck below fully checks every NodeBinding/AnyStep entry, and
+  // its "~nodeInvalid" fallback brands anything that is neither (N-wf3 fixture).
+  nodes<const Nodes extends Record<string, unknown>>(
+    nodes: Nodes & BindingCheck<State, In, Nodes>,
+  ): WorkflowNodes<
+    Name, State, In, Out, Extract<keyof Nodes, string>,
+    NodeDepKeys<{ [K in keyof Nodes]: UnwrapBinding<Nodes[K]> }>
+  >;
+}
+
+interface WorkflowGraphCapture {
+  nodes: Record<string, { step: unknown; reads?: (s: unknown) => unknown; writes?: string }>;
+  start: string;
+  edges: Record<string, string>;
+  branches: Record<string, (s: unknown) => string>;
+  returns: ((s: unknown) => unknown) | null;
 }
 
 export function workflow<
@@ -346,10 +447,32 @@ export function workflow<
   In extends IO<any, any>,
   Out extends IO<any, any>,
 >(def: { name: Name; state: State; input: In; output: Out }): WorkflowInit<Name, State, In, Out> {
-  void def;
   return {
-    nodes: (() => ({ flow: () => undefined as never })) as never,
-  } as WorkflowInit<Name, State, In, Out>;
+    nodes(rawNodes: Record<string, unknown>) {
+      const graph: WorkflowGraphCapture = { nodes: {}, start: "", edges: {}, branches: {}, returns: null };
+      for (const [k, v] of Object.entries(rawNodes)) {
+        const b = v as { "~binding"?: true; step?: unknown; reads?: (s: unknown) => unknown; writes?: string };
+        graph.nodes[k] = b["~binding"] ? { step: b.step, reads: b.reads, writes: b.writes } : { step: v };
+      }
+      const flowApi = {
+        start(n: string) { graph.start = n; return flowApi; },
+        edge(f: string, t: string) { graph.edges[f] = t; return flowApi; },
+        branch(f: string, r: (s: unknown) => string) { graph.branches[f] = r; return flowApi; },
+      };
+      return {
+        flow(build: (b: never) => unknown) {
+          build(flowApi as never);
+          const wf = {
+            "~kind": "workflow" as const,
+            name: def.name, state: def.state, input: def.input, output: def.output,
+            "~graph": graph,
+            returns(fn: (s: unknown) => unknown) { graph.returns = fn; return wf; },
+          };
+          return wf;
+        },
+      };
+    },
+  } as unknown as WorkflowInit<Name, State, In, Out>;
 }
 
 /* ============================================================================
@@ -382,13 +505,24 @@ export type NoKeyCollision<A, W> = keyof A & keyof W extends never
   ? unknown
   : { readonly "~duplicateRegistryKey": keyof A & keyof W };
 
+export interface RunOpts {
+  readonly threadId?: string;
+}
+
 export type RunFn<Reg> = <Name extends keyof Reg>(
   name: Name,
   input: InputOf<Reg[Name]>,
+  opts?: RunOpts,
 ) => Promise<OutputOf<Reg[Name]>>;
 
 export interface Runtime<Reg> {
   readonly run: RunFn<Reg>;
+  resume(threadIdValue: string, value: unknown): Promise<unknown>;
+}
+
+interface RegEntry {
+  readonly kind: "agent" | "workflow" | "team";
+  readonly value: unknown;
 }
 
 /** deps fully supplied here → directly runnable. (negative②: a missing dep
@@ -404,9 +538,46 @@ export function defineLoopy<
   workflows: W & NoKeyCollision<A, W>;
   teams?: T & NoKeyCollision<A & W, T>;
   deps: Pick<LoopyDeps, RequiredDeps<A & W & T>>;
+  models?: Record<string, ModelClient>;
+  store?: Checkpointer;
+  onEvent?: (e: RuntimeEvent) => void;
 }): Runtime<A & W & T> {
-  void def;
-  return { run: (async () => undefined as never) as RunFn<A & W & T> };
+  const store = def.store ?? memoryStore();
+  const registry = new Map<string, RegEntry>();
+  for (const [k, v] of Object.entries(def.agents)) registry.set(k, { kind: "agent", value: v });
+  for (const [k, v] of Object.entries(def.workflows)) registry.set(k, { kind: "workflow", value: v });
+  for (const [k, v] of Object.entries(def.teams ?? {})) registry.set(k, { kind: "team", value: v });
+  let counter = 0;
+
+  const driverFor = (name: string): { driver: Driver; kind: RegEntry["kind"] } => {
+    const e = registry.get(name);
+    if (!e) throw new Error(`defineLoopy: unknown entry "${name}"`);
+    if (e.kind === "agent") return { driver: agentDriver(e.value as never), kind: e.kind };
+    if (e.kind === "workflow") return { driver: workflowDriver(e.value as never, agentNode as never), kind: e.kind };
+    return { driver: teamDriver(e.value as never), kind: e.kind };
+  };
+
+  const exec = async (name: string, input: unknown, opts?: RunOpts, resume?: { value: unknown }): Promise<unknown> => {
+    const { driver, kind } = driverFor(name);
+    // restart-safe auto id; determinism only binds inside ctx — defineLoopy's body sits
+    // outside the recorded-effect boundary, so Math.random here is fine.
+    const out = await _runThread({
+      driver, store, threadId: opts?.threadId ?? `${name}#${counter++}-${Math.random().toString(36).slice(2, 8)}`, entry: name,
+      deps: def.deps as Record<string, unknown>, models: def.models ?? {}, onEvent: def.onEvent,
+      input, resume,
+    });
+    return kind === "agent" ? (out as { output: unknown }).output : out;
+  };
+
+  return {
+    run: (async (name, input, opts) => exec(String(name), input, opts)) as RunFn<A & W & T>,
+    async resume(threadIdValue: string, value: unknown): Promise<unknown> {
+      const log = await store.readLog(mkThreadId(threadIdValue));
+      const first = log[0];
+      if (!first || first.type !== "RunStarted") throw new Error(`resume("${threadIdValue}"): no RunStarted in log`);
+      return exec(first.entry, undefined, { threadId: threadIdValue }, { value });
+    },
+  };
 }
 
 /* ============================================================================
@@ -426,16 +597,23 @@ export interface Loopy<Reg, Missing extends keyof LoopyDeps> {
   readonly run: [Missing] extends [never] ? RunFn<Reg> : RunBlocked<Missing>;
 }
 
-/** deps deferred → returns a builder whose `run` unlocks only when Missing=never. */
+/** deps deferred → returns a builder whose `run` unlocks only when Missing=never.
+ *  v1 limit: the builder surface does not expose `resume` — apps that need suspend
+ *  should use defineLoopy (+ store). */
 export function loopy<const A extends Record<string, AnyEntry>, const W extends Record<string, AnyEntry>>(def: {
   agents: A;
   workflows: W & NoKeyCollision<A, W>;
 }): Loopy<A & W, RequiredDeps<A & W>> {
-  void def;
-  return { provide: (() => undefined as never) as never, run: undefined as never } as Loopy<
-    A & W,
-    RequiredDeps<A & W>
-  >;
+  const make = (acc: Record<string, unknown>): unknown => {
+    let rt: Runtime<never> | null = null; // lazily built once per builder stage — runs share one runtime/store
+    const runtime = (): Runtime<never> =>
+      (rt ??= defineLoopy({ agents: def.agents, workflows: def.workflows as never, deps: acc as never }) as Runtime<never>);
+    return {
+      provide: (more: Record<string, unknown>) => make({ ...acc, ...more }),
+      run: (name: never, input: never, opts?: RunOpts) => runtime().run(name, input, opts),
+    };
+  };
+  return make({}) as Loopy<A & W, RequiredDeps<A & W>>;
 }
 
 /* ============================================================================
@@ -505,6 +683,8 @@ export interface Team<Name extends string, Agents, State, Result> {
   readonly input: IO<TeamInputOf<State>>;
   readonly output: IO<Result>;
   readonly "~deps"?: TeamDeps<Agents>;
+  /** runtime team-control capture (Task 14); type narrowed in the runtime module. */
+  readonly "~team"?: unknown;
 }
 
 /** a channel's stored value type. */
@@ -584,9 +764,48 @@ export function team<
   agents: Agents & GuardAgents<Agents>;
   maxTurns?: number;
 }): TeamBuilder<Name, Agents, State> {
-  void def;
+  const capture = {
+    entry: def.entry as string,
+    agents: def.agents as Record<string, unknown>,
+    maxTurns: def.maxTurns,
+    writes: {} as Record<string, string>,
+    router: null as ((s: unknown) => string) | null,
+  };
+  const mkTeam = (): unknown => ({
+    "~kind": "team",
+    name: def.name,
+    entry: def.entry,
+    agents: def.agents,
+    state: def.state,
+    maxTurns: def.maxTurns,
+    input: undefined as never,  // 타입 전용 표면 (AnyEntry 호환) — 런타임 미사용
+    output: undefined as never,
+    "~team": capture,
+  });
   return {
-    writes: (() => ({ router: () => undefined as never })) as never,
-    router: (() => undefined as never) as never,
-  } as TeamBuilder<Name, Agents, State>;
+    writes: (map: Record<string, string>) => {
+      capture.writes = map;
+      return { router: (fn: (s: unknown) => string) => ((capture.router = fn), mkTeam()) };
+    },
+    router: (fn: (s: unknown) => string) => ((capture.router = fn), mkTeam()),
+  } as unknown as TeamBuilder<Name, Agents, State>;
 }
+
+/* ============================================================================
+ * §9 — runtime surface re-exports (Task 13). Values must only be touched at
+ *      call time elsewhere in this module (see the ESM-cycle note up top).
+ * ========================================================================== */
+
+export { memoryStore } from "./runtime/store";
+export type { Checkpointer, Snapshot } from "./runtime/store";
+export { sqliteStore } from "./runtime/store-sqlite";
+export { stubModel } from "./runtime/model";
+export type { ModelClient, ModelRequest, ModelResponse, ModelMsg, StubModel } from "./runtime/model";
+export { RunSuspended } from "./runtime/scheduler";
+export { ReplayDivergence } from "./runtime/effects";
+export { AgentMaxStepsError } from "./runtime/drivers/agent";
+export { TeamMaxTurnsError } from "./runtime/drivers/team";
+export { ParseError } from "./runtime/sap";
+export type { Event as RuntimeEvent, ThreadId, RunId } from "./runtime/events";
+export { verifyReplay } from "./runtime/verify";
+export { anthropic } from "./runtime/model-anthropic";
