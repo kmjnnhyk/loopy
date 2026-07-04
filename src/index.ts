@@ -809,3 +809,5 @@ export { ParseError } from "./runtime/sap";
 export type { Event as RuntimeEvent, ThreadId, RunId } from "./runtime/events";
 export { verifyReplay } from "./runtime/verify";
 export { anthropic } from "./runtime/model-anthropic";
+export { replayThread } from "./runtime/replay";
+export type { ReplayResult, ReplayDivergenceInfo } from "./runtime/replay";
