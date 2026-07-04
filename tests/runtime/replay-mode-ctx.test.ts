@@ -33,6 +33,21 @@ test("replay mode: interrupt with no recorded Resumed → ReplayDivergence (does
   await expect(ctx.interrupt({ ask: "x" })).rejects.toBeInstanceOf(ReplayDivergence);
 });
 
+test("replay mode: memo miss on sleep → ReplayDivergence (async reject)", async () => {
+  const ctx = ctxWith([], true);
+  await expect(ctx.sleep(1)).rejects.toBeInstanceOf(ReplayDivergence);
+});
+
+test("replay mode: memo miss on now() → ReplayDivergence (sync throw)", () => {
+  const ctx = ctxWith([], true);
+  expect(() => ctx.now()).toThrow(ReplayDivergence);
+});
+
+test("replay mode: memo miss on random() → ReplayDivergence (sync throw)", () => {
+  const ctx = ctxWith([], true);
+  expect(() => ctx.random()).toThrow(ReplayDivergence);
+});
+
 test("normal mode is unchanged: memo miss re-issues the effect for real", async () => {
   const ctx = ctxWith([], /* replay */ false);
   const model: ModelClient = { async complete() { return { text: "ok", stopReason: "end_turn" }; } };
