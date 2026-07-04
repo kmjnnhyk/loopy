@@ -8,6 +8,9 @@
     ".": "./src/index.ts",
     "./test": "./src/test/index.ts"
   },
+  "bin": {
+    "loopy": "./src/cli.ts"
+  },
   "scripts": {
     "emit": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
