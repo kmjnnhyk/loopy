@@ -139,6 +139,31 @@ A full documentation site is in progress. In the meantime, the annotated
 [`examples/`](./examples) are the most accurate usage reference — they compile
 against the type surface.
 
+## Testing — record→replay (`loopy/test`)
+
+```ts
+import { expect } from "bun:test";
+import { defineLoopyTest } from "loopy/test";
+import { runtime } from "./loopy.config";
+
+const { test } = defineLoopyTest(runtime, { dir: import.meta.dir });
+
+test("designFlow: figma → PR", async (t) => {
+  const r = await t.replay("designFlow", { message: "add /healthz" });
+  //  first run  → real run, records tests/__golden__/designFlow_figma-PR.json
+  //  later runs → replays the golden (0 LLM calls); reports the first divergence
+  expect(r.output).toEqual({ prUrl: "…/pull/9" });
+});
+```
+
+Run `loopy test` to replay, `loopy test -u` to re-record after an intended change.
+
+**Determinism contract:** replay compares the arguments your code passes to each effect
+(model request, tool call) against the recording. Keep effect arguments deterministic given
+the run input. A timestamp / UUID / random id placed *into* an effect's arguments changes
+every run and will surface as a replay divergence — that is the harness detecting author
+impurity, not a false positive. (v1 has no masking.)
+
 ## Verifying the type surface
 
 There is no test runner — the "tests" are TypeScript compile checks:
