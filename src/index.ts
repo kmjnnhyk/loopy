@@ -536,6 +536,14 @@ interface RegEntry {
   readonly value: unknown;
 }
 
+/** Agent drivers wrap their result in an `{ output, ... }` envelope; workflow/team
+ *  drivers return the value directly. This is the SINGLE place that shape is peeled —
+ *  both exec() (run) and testHandle.replay() unwrap through it, so if the envelope
+ *  shape ever changes there is one line to edit, not two. */
+function unwrapEntryOutput(kind: RegEntry["kind"], raw: unknown): unknown {
+  return kind === "agent" ? (raw as { output: unknown }).output : raw;
+}
+
 /** deps fully supplied here → directly runnable. (negative②: a missing dep
  *  errors as TS2741 "Property 'x' is missing … in Pick<LoopyDeps, …>".) */
 export function defineLoopy<
@@ -582,11 +590,10 @@ export function defineLoopy<
     async replay(name, input, goldenEvents): Promise<ReplayResult> {
       const { driver, kind } = driverFor(name);
       const res = await replayThread({ driver, goldenEvents, entry: String(name), input });
-      // mirror exec()'s agent-unwrap so `output` equals what run() returns.
-      if (kind === "agent" && res.divergence === null) {
-        return { output: (res.output as { output: unknown }).output, divergence: null };
-      }
-      return res;
+      // mirror exec()'s agent-unwrap so `output` equals what run() returns (a divergence
+      // leaves output undefined, so only unwrap on a clean replay).
+      if (res.divergence !== null) return res;
+      return { output: unwrapEntryOutput(kind, res.output), divergence: null };
     },
   };
 
@@ -599,7 +606,7 @@ export function defineLoopy<
       deps: def.deps as Record<string, unknown>, models: def.models ?? {}, onEvent: def.onEvent,
       input, resume,
     });
-    return kind === "agent" ? (out as { output: unknown }).output : out;
+    return unwrapEntryOutput(kind, out);
   };
 
   return {
