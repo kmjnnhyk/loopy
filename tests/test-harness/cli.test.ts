@@ -19,3 +19,15 @@ test("loopy test (no -u) leaves UPDATE_GOLDEN unset", () => {
   const p = Bun.spawnSync(["bun", "src/cli.ts", "test", probe]);
   expect(p.stdout.toString()).toContain("UPDATE_GOLDEN=<unset>");
 });
+
+test("unknown command → exit code 2 with a usage error on stderr", () => {
+  const p = Bun.spawnSync(["bun", "src/cli.ts", "bogus"]);
+  expect(p.exitCode).toBe(2);
+  expect(p.stderr.toString()).toContain('unknown command "bogus"');
+});
+
+test("no command → exit code 2 with a usage error on stderr", () => {
+  const p = Bun.spawnSync(["bun", "src/cli.ts"]);
+  expect(p.exitCode).toBe(2);
+  expect(p.stderr.toString()).toContain('unknown command ""');
+});

@@ -71,3 +71,18 @@ test("output divergence: same effects, different returns projection → output m
   expect(r.divergence?.kind).toBe("output");
   expect(r.divergence?.pos).toBe("<run-output>");
 });
+
+test("guard: an empty golden log → rejects (not a completed run)", async () => {
+  await expect(
+    replayThread({ driver: toyDriver(), goldenEvents: [], entry: "toy", input: { n: 5 } }),
+  ).rejects.toThrow(/not a completed run/);
+});
+
+test("guard: a golden log not ending in RunEnded → rejects (not a completed run)", async () => {
+  const golden = await record(toyDriver(), { n: 5 });
+  const truncated = golden.slice(0, -1); // drop the trailing RunEnded
+  expect(truncated[truncated.length - 1]!.type).not.toBe("RunEnded"); // precondition: last is a non-terminal event
+  await expect(
+    replayThread({ driver: toyDriver(), goldenEvents: truncated, entry: "toy", input: { n: 5 } }),
+  ).rejects.toThrow(/not a completed run/);
+});

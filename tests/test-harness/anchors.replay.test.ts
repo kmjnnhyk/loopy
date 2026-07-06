@@ -2,14 +2,16 @@ import { expect } from "bun:test";
 import { defineLoopy, stubModel } from "loopy";
 import { defineLoopyTest } from "loopy/test";
 import { designFlow } from "../../examples/workflows";
-import { classifier, sufficiency, fileAnalyzer, verifier, codeGen } from "../../examples/agents";
+import { fileAnalyzer, verifier, codeGen } from "../../examples/agents";
 import { stubDeps } from "../anchors/designflow.test";
 
 const answer = (o: unknown) => ({ text: JSON.stringify(o), stopReason: "end_turn" });
 
 // Record path uses stub models (deterministic). CI replays the committed golden → 0 model calls.
 const runtime = defineLoopy({
-  agents: { classifier, sufficiency, fileAnalyzer, verifier, codeGen },
+  // Only the agents designFlow's graph actually visits: fileAnalyzer, codeGen, verifier.
+  // (classifier is unused here; sufficiency belongs to jiraFlow.)
+  agents: { fileAnalyzer, verifier, codeGen },
   workflows: { designFlow },
   deps: stubDeps,
   models: {
