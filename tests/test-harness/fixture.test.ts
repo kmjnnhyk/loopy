@@ -83,3 +83,28 @@ test("goldenKey decouples the golden file from the dispatch entry name", async (
     cleanup();
   }
 });
+
+test("record path fails loud when the just-recorded golden self-diverges (impure orchestration)", async () => {
+  cleanup();
+  try {
+    // Author impurity: a `reads` that reads external mutable state. The record path
+    // immediately self-replays the fresh golden; that replay re-runs `reads` and sees
+    // a different value than the recording, so the just-written golden does NOT
+    // reproduce itself. The harness's whole reason to exist is to surface that — it
+    // MUST fail loud, not silently return {output: undefined}.
+    let seq = 0;
+    const impureFlow = workflow({
+      name: "impureFlow",
+      state: { out: lastChannel<{ n: number } | null>(null) },
+      input: io<{ n: number }>(),
+      output: io<{ n: number }>(),
+    })
+      .nodes({ dbl: node(dbl, { reads: () => ({ n: seq++ }), writes: "out" }) })
+      .flow((b) => b.start("dbl").edge("dbl", END))
+      .returns((s) => ({ n: s.out?.n ?? -1 }));
+    const rt = defineLoopy({ agents: {}, workflows: { impureFlow }, deps: {} as never });
+    await expect(replayFixture(rt, { dir: TMP }).replay("impureFlow", { n: 0 })).rejects.toBeInstanceOf(ReplayDivergence);
+  } finally {
+    cleanup();
+  }
+});
