@@ -27,8 +27,16 @@ export function replayFixture(runtime: Runtime<any>, opts: ReplayFixtureOpts): R
       if (update || !goldenExists(path)) {
         const events = await handle.record(name, input);
         writeGolden(path, { entry: name, input, events });
-        // return the output the same way replay would (agent-unwrapped) by replaying the fresh golden.
+        // Self-check via replay of the fresh golden: this also agent-unwraps the output
+        // the same way a real replay would. A divergence here means the just-recorded
+        // golden does NOT reproduce itself — the author's orchestration is impure
+        // (non-deterministic reads/router/returns). Fail loud: a golden that can't replay
+        // against itself is worthless as a regression baseline, and this is the ONE place
+        // that impurity is observable (the immediate self-replay sees the mutated state).
         const rec = await handle.replay(name, input, events);
+        if (rec.divergence) {
+          throw new ReplayDivergence(rec.divergence.pos, rec.divergence.expected, rec.divergence.actual);
+        }
         return { output: rec.output };
       }
       const golden = readGolden(path);
