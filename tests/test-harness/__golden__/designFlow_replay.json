@@ -1,0 +1,631 @@
+{
+  "loopyGoldenVersion": 1,
+  "entry": "designFlow",
+  "input": {
+    "message": "add /healthz"
+  },
+  "events": [
+    {
+      "type": "RunStarted",
+      "entry": "designFlow",
+      "input": {
+        "message": "add /healthz"
+      },
+      "node": "",
+      "seq": 0,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StatePatched",
+      "update": {
+        "input": {
+          "message": "add /healthz"
+        }
+      },
+      "node": "",
+      "seq": 1,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepStarted",
+      "node": "fetchFigma#1",
+      "seq": 2,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "ToolCalled",
+      "effectId": 3,
+      "posKey": "fetchFigma#1|0|tool:fetchFigma",
+      "argsDigest": "73cd93695b93c936",
+      "tool": "fetchFigma",
+      "args": {
+        "url": "add /healthz"
+      },
+      "node": "fetchFigma#1",
+      "seq": 3,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "ToolReturned",
+      "effectId": 3,
+      "ok": true,
+      "value": {
+        "nodeId": "n",
+        "frames": [
+          "f"
+        ]
+      },
+      "node": "fetchFigma#1",
+      "seq": 4,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StatePatched",
+      "update": {
+        "figma": {
+          "nodeId": "n",
+          "frames": [
+            "f"
+          ]
+        }
+      },
+      "node": "",
+      "seq": 5,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepEnded",
+      "node": "fetchFigma#1",
+      "seq": 6,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepStarted",
+      "node": "fileAnalyzer#1",
+      "seq": 7,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StatePatched",
+      "update": {
+        "messages": {
+          "role": "user",
+          "content": "{\"goal\":\"add /healthz\"}"
+        }
+      },
+      "node": "fileAnalyzer#1",
+      "seq": 8,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepStarted",
+      "node": "fileAnalyzer#1/think#1",
+      "seq": 9,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "ModelCallRequested",
+      "effectId": 10,
+      "posKey": "fileAnalyzer#1/think#1|0|model",
+      "argsDigest": "305712e8b7dd2ab0",
+      "req": {
+        "model": "haiku",
+        "system": "Identify the files relevant to a goal.\n\nWhen you are done, respond with a single JSON object as the final answer.",
+        "messages": [
+          {
+            "role": "user",
+            "content": "{\"goal\":\"add /healthz\"}"
+          }
+        ],
+        "tools": []
+      },
+      "node": "fileAnalyzer#1/think#1",
+      "seq": 10,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "ModelCallReturned",
+      "effectId": 10,
+      "ok": true,
+      "value": {
+        "text": "{\"paths\":[\"src/a.ts\"]}",
+        "stopReason": "end_turn"
+      },
+      "node": "fileAnalyzer#1/think#1",
+      "seq": 11,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StatePatched",
+      "update": {
+        "output": {
+          "paths": [
+            "src/a.ts"
+          ]
+        },
+        "phase": "done",
+        "thinks": 1
+      },
+      "node": "fileAnalyzer#1",
+      "seq": 12,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepEnded",
+      "node": "fileAnalyzer#1/think#1",
+      "seq": 13,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StatePatched",
+      "update": {
+        "paths": {
+          "paths": [
+            "src/a.ts"
+          ]
+        }
+      },
+      "node": "",
+      "seq": 14,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepEnded",
+      "node": "fileAnalyzer#1",
+      "seq": 15,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepStarted",
+      "node": "codeGen#1",
+      "seq": 16,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StatePatched",
+      "update": {
+        "messages": {
+          "role": "user",
+          "content": "{\"task\":\"add /healthz\"}"
+        }
+      },
+      "node": "codeGen#1",
+      "seq": 17,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepStarted",
+      "node": "codeGen#1/think#1",
+      "seq": 18,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "ModelCallRequested",
+      "effectId": 19,
+      "posKey": "codeGen#1/think#1|0|model",
+      "argsDigest": "f66a4cf5e91542f7",
+      "req": {
+        "model": "sonnet",
+        "system": "Generate code changes in a think→act→observe loop.\n\nWhen you are done, respond with a single JSON object as the final answer.",
+        "messages": [
+          {
+            "role": "user",
+            "content": "{\"task\":\"add /healthz\"}"
+          }
+        ],
+        "tools": [
+          {
+            "name": "editFile",
+            "description": "Apply a find/replace edit to a file."
+          },
+          {
+            "name": "createFile",
+            "description": "Create a new file."
+          },
+          {
+            "name": "readFile",
+            "description": "Read a file's contents."
+          },
+          {
+            "name": "fileAnalyzer",
+            "description": "sub-agent fileAnalyzer"
+          }
+        ]
+      },
+      "node": "codeGen#1/think#1",
+      "seq": 19,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "ModelCallReturned",
+      "effectId": 19,
+      "ok": true,
+      "value": {
+        "text": "{\"applied\":[\"src/a.ts\"],\"failed\":[]}",
+        "stopReason": "end_turn"
+      },
+      "node": "codeGen#1/think#1",
+      "seq": 20,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StatePatched",
+      "update": {
+        "output": {
+          "applied": [
+            "src/a.ts"
+          ],
+          "failed": []
+        },
+        "phase": "done",
+        "thinks": 1
+      },
+      "node": "codeGen#1",
+      "seq": 21,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepEnded",
+      "node": "codeGen#1/think#1",
+      "seq": 22,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StatePatched",
+      "update": {
+        "gen": {
+          "applied": [
+            "src/a.ts"
+          ],
+          "failed": []
+        }
+      },
+      "node": "",
+      "seq": 23,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepEnded",
+      "node": "codeGen#1",
+      "seq": 24,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepStarted",
+      "node": "build#1",
+      "seq": 25,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "ToolCalled",
+      "effectId": 26,
+      "posKey": "build#1|0|tool:build",
+      "argsDigest": "2b4d93e08a1d1370",
+      "tool": "build",
+      "args": {
+        "paths": [
+          "src/a.ts"
+        ]
+      },
+      "node": "build#1",
+      "seq": 26,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "ToolReturned",
+      "effectId": 26,
+      "ok": true,
+      "value": {
+        "ok": true,
+        "log": "OK"
+      },
+      "node": "build#1",
+      "seq": 27,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StatePatched",
+      "update": {
+        "build": {
+          "ok": true,
+          "log": "OK"
+        }
+      },
+      "node": "",
+      "seq": 28,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepEnded",
+      "node": "build#1",
+      "seq": 29,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepStarted",
+      "node": "verify#1",
+      "seq": 30,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StatePatched",
+      "update": {
+        "messages": {
+          "role": "user",
+          "content": "{\"diff\":\"src/a.ts\"}"
+        }
+      },
+      "node": "verify#1",
+      "seq": 31,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepStarted",
+      "node": "verify#1/think#1",
+      "seq": 32,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "ModelCallRequested",
+      "effectId": 33,
+      "posKey": "verify#1/think#1|0|model",
+      "argsDigest": "a172b0282bba59fe",
+      "req": {
+        "model": "haiku",
+        "system": "Verify the applied changes against the goal.\n\nWhen you are done, respond with a single JSON object as the final answer.",
+        "messages": [
+          {
+            "role": "user",
+            "content": "{\"diff\":\"src/a.ts\"}"
+          }
+        ],
+        "tools": []
+      },
+      "node": "verify#1/think#1",
+      "seq": 33,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "ModelCallReturned",
+      "effectId": 33,
+      "ok": true,
+      "value": {
+        "text": "{\"passed\":true,\"notes\":\"lgtm\"}",
+        "stopReason": "end_turn"
+      },
+      "node": "verify#1/think#1",
+      "seq": 34,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StatePatched",
+      "update": {
+        "output": {
+          "passed": true,
+          "notes": "lgtm"
+        },
+        "phase": "done",
+        "thinks": 1
+      },
+      "node": "verify#1",
+      "seq": 35,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepEnded",
+      "node": "verify#1/think#1",
+      "seq": 36,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StatePatched",
+      "update": {
+        "verify": {
+          "passed": true,
+          "notes": "lgtm"
+        }
+      },
+      "node": "",
+      "seq": 37,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepEnded",
+      "node": "verify#1",
+      "seq": 38,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepStarted",
+      "node": "push#1",
+      "seq": 39,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "ToolCalled",
+      "effectId": 40,
+      "posKey": "push#1|0|tool:push",
+      "argsDigest": "a5e81de4de0efb28",
+      "tool": "push",
+      "args": {
+        "sha": "src/a.ts"
+      },
+      "node": "push#1",
+      "seq": 40,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "ToolReturned",
+      "effectId": 40,
+      "ok": true,
+      "value": {
+        "pushedAt": 0
+      },
+      "node": "push#1",
+      "seq": 41,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepEnded",
+      "node": "push#1",
+      "seq": 42,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepStarted",
+      "node": "deploy#1",
+      "seq": 43,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "ToolCalled",
+      "effectId": 44,
+      "posKey": "deploy#1|0|tool:waitForDeploy",
+      "argsDigest": "2e123376a84017c5",
+      "tool": "waitForDeploy",
+      "args": {
+        "since": 0
+      },
+      "node": "deploy#1",
+      "seq": 44,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "ToolReturned",
+      "effectId": 44,
+      "ok": true,
+      "value": {
+        "ok": true,
+        "url": "https://d.example/pull/9"
+      },
+      "node": "deploy#1",
+      "seq": 45,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StatePatched",
+      "update": {
+        "deploy": {
+          "ok": true,
+          "url": "https://d.example/pull/9"
+        }
+      },
+      "node": "",
+      "seq": 46,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "StepEnded",
+      "node": "deploy#1",
+      "seq": 47,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    },
+    {
+      "type": "RunEnded",
+      "output": {
+        "prUrl": "https://d.example/pull/9"
+      },
+      "node": "",
+      "seq": 48,
+      "threadId": "__golden__",
+      "runId": "__golden__#run",
+      "ts": ""
+    }
+  ]
+}

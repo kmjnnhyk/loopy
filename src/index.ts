@@ -24,6 +24,8 @@ import type { ModelClient } from "./runtime/model";
 import { threadId as mkThreadId } from "./runtime/events";
 import type { Event as RuntimeEvent } from "./runtime/events";
 import type { Driver } from "./runtime/scheduler";
+import { replayThread } from "./runtime/replay";
+import type { ReplayResult } from "./runtime/replay";
 
 /* ============================================================================
  * §0 — Dependency registry (augmentable) + capability contexts
@@ -515,9 +517,18 @@ export type RunFn<Reg> = <Name extends keyof Reg>(
   opts?: RunOpts,
 ) => Promise<OutputOf<Reg[Name]>>;
 
+/** Internal test capability (consumed by `loopy/test`). Present on defineLoopy runtimes;
+ *  absent on the loopy() builder (which has no store/resume in v1). */
+export interface TestHandle {
+  record(name: string, input: unknown): Promise<readonly RuntimeEvent[]>;
+  replay(name: string, input: unknown, goldenEvents: readonly RuntimeEvent[]): Promise<ReplayResult>;
+}
+
 export interface Runtime<Reg> {
   readonly run: RunFn<Reg>;
   resume(threadIdValue: string, value: unknown): Promise<unknown>;
+  /** internal — used by loopy/test; not part of the public authoring surface. */
+  readonly "~test"?: TestHandle;
 }
 
 interface RegEntry {
@@ -557,6 +568,28 @@ export function defineLoopy<
     return { driver: teamDriver(e.value as never), kind: e.kind };
   };
 
+  const testHandle: TestHandle = {
+    async record(name, input): Promise<readonly RuntimeEvent[]> {
+      const { driver } = driverFor(name);
+      const recStore = memoryStore();
+      const tid = "__golden__";
+      await _runThread({
+        driver, store: recStore, threadId: tid, entry: name,
+        deps: def.deps as Record<string, unknown>, models: def.models ?? {}, input,
+      });
+      return recStore.readLog(mkThreadId(tid));
+    },
+    async replay(name, input, goldenEvents): Promise<ReplayResult> {
+      const { driver, kind } = driverFor(name);
+      const res = await replayThread({ driver, goldenEvents, entry: String(name), input });
+      // mirror exec()'s agent-unwrap so `output` equals what run() returns.
+      if (kind === "agent" && res.divergence === null) {
+        return { output: (res.output as { output: unknown }).output, divergence: null };
+      }
+      return res;
+    },
+  };
+
   const exec = async (name: string, input: unknown, opts?: RunOpts, resume?: { value: unknown }): Promise<unknown> => {
     const { driver, kind } = driverFor(name);
     // restart-safe auto id; determinism only binds inside ctx — defineLoopy's body sits
@@ -577,6 +610,7 @@ export function defineLoopy<
       if (!first || first.type !== "RunStarted") throw new Error(`resume("${threadIdValue}"): no RunStarted in log`);
       return exec(first.entry, undefined, { threadId: threadIdValue }, { value });
     },
+    "~test": testHandle,
   };
 }
 
@@ -809,3 +843,5 @@ export { ParseError } from "./runtime/sap";
 export type { Event as RuntimeEvent, ThreadId, RunId } from "./runtime/events";
 export { verifyReplay } from "./runtime/verify";
 export { anthropic } from "./runtime/model-anthropic";
+export { replayThread } from "./runtime/replay";
+export type { ReplayResult, ReplayDivergenceInfo } from "./runtime/replay";

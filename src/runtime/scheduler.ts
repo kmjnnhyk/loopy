@@ -22,6 +22,8 @@ export interface KernelCtx {
   readonly loadedEvents: readonly Event[];
   readonly deps: Record<string, unknown>;
   readonly models: Record<string, ModelClient>;
+  /** test replay: a memo miss is a divergence, not a fresh (re-)issue. */
+  readonly replay?: boolean;
 }
 
 export interface RunnableNode {
@@ -110,7 +112,7 @@ export async function runGraph(driver: Driver, scope: string, k: KernelCtx, inpu
     if (!reentry) await k.session.write({ type: "StepStarted", node: nodePath });
 
     const node = driver.node(name);
-    const ctx = makeCtx({ scope: nodePath, session: k.session, memo: k.memo, deps: k.deps });
+    const ctx = makeCtx({ scope: nodePath, session: k.session, memo: k.memo, deps: k.deps, replay: k.replay });
     const output = await node.run(node.reads(state), ctx, k, nodePath); // Suspend는 그대로 위로
 
     const updates = driver.updatesFor(name, output, state);
