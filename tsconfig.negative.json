@@ -5,7 +5,11 @@
   "compilerOptions": {
     "module": "preserve",
     "moduleResolution": "bundler",
-    "rewriteRelativeImportExtensions": false, "isolatedDeclarations": false, "composite": false, "noEmit": true },
+    "rewriteRelativeImportExtensions": false,
+    "isolatedDeclarations": false,
+    "composite": false,
+    "noEmit": true
+  },
   "include": ["examples"],
   "references": [{ "path": "./packages/core" }]
 }
