@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { lastChannel, listChannel } from "loopy";
+import { lastChannel, listChannel } from "@loopyjs/core";
 import { initialState, applyPatch, foldScoped, rawChannel, UnknownChannelError } from "../../src/runtime/channels";
 import { threadId, runId, type Event } from "../../src/runtime/events";
 

@@ -1,16 +1,16 @@
-import { END, lastChannel, listChannel, type IO } from "../../index";
-import { rawChannel, type ChannelRecord, type StateSnapshot } from "../channels";
-import { isSuspend, ReplayDivergence, type RuntimeCtx, type ToolLike } from "../effects";
-import { stableStringify } from "../events";
-import type { ModelMsg, ModelRequest, ModelResponse, ToolCallReq, ToolDecl } from "../model";
-import { parseStructured, ParseError } from "../sap";
-import { runGraph, type Driver, type KernelCtx, type RunnableNode } from "../scheduler";
-import type { RtStep } from "./workflow";
+import { END, lastChannel, listChannel, type IO } from "../../index.ts";
+import { rawChannel, type ChannelRecord, type StateSnapshot } from "../channels.ts";
+import { isSuspend, ReplayDivergence, type RuntimeCtx, type ToolLike } from "../effects.ts";
+import { stableStringify } from "../events.ts";
+import type { ModelMsg, ModelRequest, ModelResponse, ToolCallReq, ToolDecl } from "../model.ts";
+import { parseStructured, ParseError } from "../sap.ts";
+import { runGraph, type Driver, type KernelCtx, type RunnableNode } from "../scheduler.ts";
+import type { RtStep } from "./workflow.ts";
 // NOTE: genuine ESM cycle (team.ts imports agentDriver/RtAgent from this module).
 // Safe: TeamMaxTurnsError is only touched inside the act node's catch bodies below
 // (runtime, call-time access), never at this module's top-level evaluation — same
 // discipline as the cycle documented in src/index.ts.
-import { TeamMaxTurnsError } from "./team";
+import { TeamMaxTurnsError } from "./team.ts";
 
 export interface RtAgent {
   readonly name: string;

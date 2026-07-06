@@ -1,8 +1,8 @@
-import { Memo, EventSession, ReplayDivergence } from "./effects";
-import { runGraph, type Driver, type KernelCtx } from "./scheduler";
-import { memoryStore } from "./store";
-import { digest, preview, runId as mkRunId, stableStringify, threadId as mkThreadId, type Event } from "./events";
-import type { ModelClient, ModelResponse } from "./model";
+import { Memo, EventSession, ReplayDivergence } from "./effects.ts";
+import { runGraph, type Driver, type KernelCtx } from "./scheduler.ts";
+import { memoryStore } from "./store.ts";
+import { digest, preview, runId as mkRunId, stableStringify, threadId as mkThreadId, type Event } from "./events.ts";
+import type { ModelClient, ModelResponse } from "./model.ts";
 
 export interface ReplayDivergenceInfo {
   readonly kind: "effect" | "output";

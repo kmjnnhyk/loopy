@@ -14,18 +14,18 @@
 // function bodies (driver factories, defineLoopy/loopy call time), never at
 // module top-level evaluation. Type-only imports are unaffected either way.
 
-import { runThread as _runThread } from "./runtime/scheduler";
-import { workflowDriver } from "./runtime/drivers/workflow";
-import { agentDriver, agentNode } from "./runtime/drivers/agent";
-import { teamDriver } from "./runtime/drivers/team";
-import { memoryStore } from "./runtime/store";
-import type { Checkpointer } from "./runtime/store";
-import type { ModelClient } from "./runtime/model";
-import { threadId as mkThreadId } from "./runtime/events";
-import type { Event as RuntimeEvent } from "./runtime/events";
-import type { Driver } from "./runtime/scheduler";
-import { replayThread } from "./runtime/replay";
-import type { ReplayResult } from "./runtime/replay";
+import { runThread as _runThread } from "./runtime/scheduler.ts";
+import { workflowDriver } from "./runtime/drivers/workflow.ts";
+import { agentDriver, agentNode } from "./runtime/drivers/agent.ts";
+import { teamDriver } from "./runtime/drivers/team.ts";
+import { memoryStore } from "./runtime/store.ts";
+import type { Checkpointer } from "./runtime/store.ts";
+import type { ModelClient } from "./runtime/model.ts";
+import { threadId as mkThreadId } from "./runtime/events.ts";
+import type { Event as RuntimeEvent } from "./runtime/events.ts";
+import type { Driver } from "./runtime/scheduler.ts";
+import { replayThread } from "./runtime/replay.ts";
+import type { ReplayResult } from "./runtime/replay.ts";
 
 /* ============================================================================
  * §0 — Dependency registry (augmentable) + capability contexts
@@ -837,18 +837,17 @@ export function team<
  *      call time elsewhere in this module (see the ESM-cycle note up top).
  * ========================================================================== */
 
-export { memoryStore } from "./runtime/store";
-export type { Checkpointer, Snapshot } from "./runtime/store";
-export { sqliteStore } from "./runtime/store-sqlite";
-export { stubModel } from "./runtime/model";
-export type { ModelClient, ModelRequest, ModelResponse, ModelMsg, StubModel } from "./runtime/model";
-export { RunSuspended } from "./runtime/scheduler";
-export { ReplayDivergence } from "./runtime/effects";
-export { AgentMaxStepsError } from "./runtime/drivers/agent";
-export { TeamMaxTurnsError } from "./runtime/drivers/team";
-export { ParseError } from "./runtime/sap";
-export type { Event as RuntimeEvent, ThreadId, RunId } from "./runtime/events";
-export { verifyReplay } from "./runtime/verify";
-export { anthropic } from "./runtime/model-anthropic";
-export { replayThread } from "./runtime/replay";
-export type { ReplayResult, ReplayDivergenceInfo } from "./runtime/replay";
+export { memoryStore } from "./runtime/store.ts";
+export type { Checkpointer, Snapshot } from "./runtime/store.ts";
+export { stubModel } from "./runtime/model.ts";
+export type { ModelClient, ModelRequest, ModelResponse, ModelMsg, StubModel } from "./runtime/model.ts";
+export { RunSuspended } from "./runtime/scheduler.ts";
+export { ReplayDivergence } from "./runtime/effects.ts";
+export { AgentMaxStepsError } from "./runtime/drivers/agent.ts";
+export { TeamMaxTurnsError } from "./runtime/drivers/team.ts";
+export { ParseError } from "./runtime/sap.ts";
+export { digest } from "./runtime/events.ts";
+export type { Event as RuntimeEvent, ThreadId, RunId } from "./runtime/events.ts";
+export { verifyReplay } from "./runtime/verify.ts";
+export { replayThread } from "./runtime/replay.ts";
+export type { ReplayResult, ReplayDivergenceInfo } from "./runtime/replay.ts";

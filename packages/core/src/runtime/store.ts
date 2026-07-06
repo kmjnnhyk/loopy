@@ -1,4 +1,4 @@
-import type { Event, ThreadId } from "./events";
+import type { Event, ThreadId } from "./events.ts";
 
 export interface Snapshot {
   readonly status: "running" | "suspended" | "done" | "error";

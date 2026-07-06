@@ -1,9 +1,9 @@
-import { END, lastChannel, listChannel, type Msg } from "../../index";
-import type { ChannelRecord, StateSnapshot } from "../channels";
-import { stableStringify } from "../events";
-import { runGraph, type Driver, type KernelCtx, type RunnableNode } from "../scheduler";
-import type { RuntimeCtx } from "../effects";
-import { agentDriver, type RtAgent } from "./agent";
+import { END, lastChannel, listChannel, type Msg } from "../../index.ts";
+import type { ChannelRecord, StateSnapshot } from "../channels.ts";
+import { stableStringify } from "../events.ts";
+import { runGraph, type Driver, type KernelCtx, type RunnableNode } from "../scheduler.ts";
+import type { RuntimeCtx } from "../effects.ts";
+import { agentDriver, type RtAgent } from "./agent.ts";
 
 export class TeamMaxTurnsError extends Error {
   constructor(

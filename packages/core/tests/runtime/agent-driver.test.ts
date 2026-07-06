@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { agent, tool, io } from "loopy";
+import { agent, tool, io } from "@loopyjs/core";
 import { agentDriver, AgentMaxStepsError } from "../../src/runtime/drivers/agent";
 import { runThread } from "../../src/runtime/scheduler";
 import { memoryStore } from "../../src/runtime/store";

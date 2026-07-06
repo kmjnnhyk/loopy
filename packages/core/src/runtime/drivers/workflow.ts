@@ -1,7 +1,7 @@
-import { END } from "../../index";
-import { rawChannel, type ChannelRecord, type StateSnapshot } from "../channels";
-import type { Driver, KernelCtx, RunnableNode } from "../scheduler";
-import type { RuntimeCtx, ToolLike } from "../effects";
+import { END } from "../../index.ts";
+import { rawChannel, type ChannelRecord, type StateSnapshot } from "../channels.ts";
+import type { Driver, KernelCtx, RunnableNode } from "../scheduler.ts";
+import type { RuntimeCtx, ToolLike } from "../effects.ts";
 
 export interface RtStep {
   readonly name: string;

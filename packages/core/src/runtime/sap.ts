@@ -1,4 +1,4 @@
-import type { IO, InferOut } from "../index";
+import type { IO, InferOut } from "../index.ts";
 
 export class ParseError extends Error {
   constructor(

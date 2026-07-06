@@ -1,0 +1,11 @@
+{
+  "name": "@loopyjs/core",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "loopy core — type-safe DSL + event-sourced runtime",
+  "exports": {
+    ".":        { "bun": "./src/index.ts",  "types": "./dist/index.d.ts",  "default": "./dist/index.js" },
+    "./sqlite": { "bun": "./src/sqlite.ts", "types": "./dist/sqlite.d.ts", "default": "./dist/sqlite.js" }
+  },
+  "files": ["dist", "src"]
+}

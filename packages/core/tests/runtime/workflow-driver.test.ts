@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { workflow, step, node, tool, io, lastChannel, END } from "loopy";
+import { workflow, step, node, tool, io, lastChannel, END } from "@loopyjs/core";
 import { workflowDriver } from "../../src/runtime/drivers/workflow";
 import { runThread, RunSuspended } from "../../src/runtime/scheduler";
 import { memoryStore } from "../../src/runtime/store";

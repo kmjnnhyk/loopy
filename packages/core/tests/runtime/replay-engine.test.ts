@@ -4,7 +4,7 @@ import { runThread, type Driver, type RunnableNode } from "../../src/runtime/sch
 import { memoryStore } from "../../src/runtime/store";
 import { threadId } from "../../src/runtime/events";
 import { rawChannel } from "../../src/runtime/channels";
-import { lastChannel } from "loopy";
+import { lastChannel } from "@loopyjs/core";
 
 // A toy 2-node workflow-shaped driver: node "a" (a tool effect) then a router to END.
 // The tool multiplies the seed by 10. Router always goes a → END.

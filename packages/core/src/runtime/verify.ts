@@ -1,8 +1,8 @@
-import { foldScoped } from "./channels";
-import { ReplayDivergence } from "./effects";
-import { digest, stableStringify, threadId as mkThreadId } from "./events";
-import type { Driver } from "./scheduler";
-import type { Checkpointer } from "./store";
+import { foldScoped } from "./channels.ts";
+import { ReplayDivergence } from "./effects.ts";
+import { digest, stableStringify, threadId as mkThreadId } from "./events.ts";
+import type { Driver } from "./scheduler.ts";
+import type { Checkpointer } from "./store.ts";
 
 /** 완주 로그 자가 점검: 재fold 결과가 기록과 byte-identical한지 + effect 쌍 무결성. */
 export async function verifyReplay(

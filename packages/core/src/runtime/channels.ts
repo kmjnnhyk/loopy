@@ -1,5 +1,5 @@
-import type { Channel } from "../index";
-import type { Event } from "./events";
+import type { Channel } from "../index.ts";
+import type { Event } from "./events.ts";
 
 export type ChannelRecord = Record<string, Channel<any, any>>;
 export type StateSnapshot = Record<string, unknown>;

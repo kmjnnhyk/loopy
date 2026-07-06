@@ -1,7 +1,7 @@
-import type { Checkpointer } from "./store";
-import { digest, posKey, preview, serializeError } from "./events";
-import type { Event, EventBody, RunId, SerializedError, ThreadId } from "./events";
-import type { ModelClient, ModelRequest, ModelResponse } from "./model";
+import type { Checkpointer } from "./store.ts";
+import { digest, posKey, preview, serializeError } from "./events.ts";
+import type { Event, EventBody, RunId, SerializedError, ThreadId } from "./events.ts";
+import type { ModelClient, ModelRequest, ModelResponse } from "./model.ts";
 
 export interface EffectMemoEntry {
   readonly argsDigest: string;

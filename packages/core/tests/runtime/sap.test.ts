@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { io } from "loopy";
+import { io } from "@loopyjs/core";
 import { parseStructured, ParseError } from "../../src/runtime/sap";
 
 const schema = io<{ verdict: string; n: number }>();

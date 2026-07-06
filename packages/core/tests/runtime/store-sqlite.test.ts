@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { sqliteStore } from "../../src/runtime/store-sqlite";
+import { sqliteStore } from "../../src/sqlite";
 import { threadId } from "../../src/runtime/events";
 import { ev } from "./store.test";
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { END } from "loopy";
+import { END } from "@loopyjs/core";
 import { runThread, RunSuspended, type Driver, type RunnableNode } from "../../src/runtime/scheduler";
 import { rawChannel } from "../../src/runtime/channels";
 import { memoryStore } from "../../src/runtime/store";

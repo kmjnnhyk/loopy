@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
-import type { Event, ThreadId } from "./events";
-import type { Checkpointer, Snapshot } from "./store";
+import type { Event, ThreadId } from "./runtime/events.ts";
+import type { Checkpointer, Snapshot } from "./runtime/store.ts";
 
 export function sqliteStore(path: string): Checkpointer {
   const db = new Database(path, { create: true });
