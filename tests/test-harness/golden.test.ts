@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { goldenPath, goldenExists, readGolden, writeGolden } from "../../src/test/golden";
-import type { Event } from "../../src/runtime/events";
+import { digest, type Event } from "../../src/runtime/events";
 
 const TMP = "/tmp/loopy-golden-test";
 
@@ -9,9 +9,19 @@ function ev(seq: number): Event {
   return { seq, threadId: "abc" as never, runId: "r" as never, ts: "2026-07-04T00:00:00.000Z", node: "", type: "RunEnded", output: { ok: true } } as Event;
 }
 
-test("goldenPath sanitizes the test name and nests under __golden__", () => {
-  const p = goldenPath(TMP, "designFlow: figma → PR");
-  expect(p).toBe(`${TMP}/__golden__/designFlow_figma-PR.json`);
+test("goldenPath sanitizes the test name, appends a digest, and nests under __golden__", () => {
+  const name = "designFlow: figma → PR";
+  const p = goldenPath(TMP, name);
+  expect(p).toBe(`${TMP}/__golden__/designFlow_figma-PR.${digest(name).slice(0, 8)}.json`);
+});
+
+test("names that sanitize to the same stem still get distinct paths (digest suffix)", () => {
+  // both sanitize to "a_b"; pre-fix they collided onto one golden file
+  const p1 = goldenPath(TMP, "a: b");
+  const p2 = goldenPath(TMP, "a / b");
+  expect(p1).not.toBe(p2);
+  expect(p1).toContain("/a_b."); // same sanitized stem...
+  expect(p2).toContain("/a_b."); // ...distinct digest suffix
 });
 
 test("write then read round-trips entry/input/events", () => {

@@ -1,10 +1,12 @@
 import type { Checkpointer } from "./store";
-import { digest, posKey, serializeError } from "./events";
+import { digest, posKey, preview, serializeError } from "./events";
 import type { Event, EventBody, RunId, SerializedError, ThreadId } from "./events";
 import type { ModelClient, ModelRequest, ModelResponse } from "./model";
 
 export interface EffectMemoEntry {
   readonly argsDigest: string;
+  /** recorded raw args/req — kept so a divergence can show the recorded value, not just its digest */
+  readonly argsValue?: unknown;
   result?: { readonly ok: boolean; readonly value?: unknown; readonly error?: SerializedError };
 }
 
@@ -21,7 +23,8 @@ export class Memo {
       switch (e.type) {
         case "ToolCalled":
         case "ModelCallRequested": {
-          const entry: EffectMemoEntry = { argsDigest: e.argsDigest };
+          const argsValue = e.type === "ToolCalled" ? e.args : e.req;
+          const entry: EffectMemoEntry = { argsDigest: e.argsDigest, argsValue };
           m.effects.set(e.posKey, entry);
           m.byEffectId.set(e.effectId, entry);
           break;
@@ -170,8 +173,14 @@ export class ReplayDivergence extends Error {
     readonly pos: string,
     readonly expected: string,
     readonly actual: string,
+    /** recorded value preview — when set, shown alongside the `expected` digest */
+    readonly expectedPreview?: string,
+    /** replay-produced value preview — when set, shown alongside the `actual` digest */
+    readonly actualPreview?: string,
   ) {
-    super(`replay divergence at ${pos}: recorded args digest ${expected}, replay produced ${actual}`);
+    // preview present → "<value>  (digest <d>)"; absent → the bare digest/label (miss/interrupt cases)
+    const fmt = (label: string, prev?: string) => (prev !== undefined ? `${prev}  (digest ${label})` : label);
+    super(`replay divergence at ${pos}:\n  recorded  ${fmt(expected, expectedPreview)}\n  replayed  ${fmt(actual, actualPreview)}`);
     this.name = "ReplayDivergence";
   }
 }
@@ -225,13 +234,14 @@ export function makeCtx(o: {
     const argsDigest = digest(args);
     const hit = o.memo.effect(pos);
     if (hit?.result) {
-      if (hit.argsDigest !== argsDigest) throw new ReplayDivergence(pos, hit.argsDigest, argsDigest);
+      if (hit.argsDigest !== argsDigest)
+        throw new ReplayDivergence(pos, hit.argsDigest, argsDigest, preview(hit.argsValue), preview(args));
       if (hit.result.ok) return hit.result.value as T;
       throw deserializeError(hit.result.error!);
     }
     // replay mode: a miss means author code requested an effect the golden log
     // doesn't have (went down a new branch / added a call) → first divergence point.
-    if (o.replay) throw new ReplayDivergence(pos, "<no recorded effect>", argsDigest);
+    if (o.replay) throw new ReplayDivergence(pos, "<no recorded effect>", argsDigest, undefined, preview(args));
     // miss OR dangling call (crash mid-effect / suspend mid-tool) → (re-)issue: at-least-once
     const effectId = o.session.reserve();
     await writeCalled(effectId, pos, argsDigest);
@@ -298,7 +308,7 @@ export function makeCtx(o: {
       const pos = nextPos("sleep");
       const hit = o.memo.effect(pos);
       if (hit?.result) return; // replay: instant
-      if (o.replay) throw new ReplayDivergence(pos, "<no recorded effect>", "");
+      if (o.replay) throw new ReplayDivergence(pos, "<no recorded effect>", `sleep(${ms}ms)`);
       const effectId = o.session.reserve();
       await o.session.writeReserved(effectId, { type: "SleepScheduled", effectId, posKey: pos, ms, node: o.scope });
       await new Promise<void>((r) => setTimeout(r, ms));
@@ -309,7 +319,7 @@ export function makeCtx(o: {
       const pos = nextPos("now");
       const hit = o.memo.effect(pos);
       if (hit?.result) return hit.result.value as number;
-      if (o.replay) throw new ReplayDivergence(pos, "<no recorded effect>", "");
+      if (o.replay) throw new ReplayDivergence(pos, "<no recorded effect>", "now()");
       const effectId = o.session.reserve();
       const value = Date.now();
       // sync signature can't await — the session latch surfaces the failure on the next awaited write
@@ -321,7 +331,7 @@ export function makeCtx(o: {
       const pos = nextPos("random");
       const hit = o.memo.effect(pos);
       if (hit?.result) return hit.result.value as number;
-      if (o.replay) throw new ReplayDivergence(pos, "<no recorded effect>", "");
+      if (o.replay) throw new ReplayDivergence(pos, "<no recorded effect>", "random()");
       const effectId = o.session.reserve();
       const value = Math.random();
       // sync signature can't await — the session latch surfaces the failure on the next awaited write

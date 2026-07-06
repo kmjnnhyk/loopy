@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { stableStringify, digest, posKey, serializeError, threadId } from "../../src/runtime/events";
+import { stableStringify, digest, preview, posKey, serializeError, threadId } from "../../src/runtime/events";
 
 describe("stableStringify", () => {
   test("key order-insensitive", () => {
@@ -24,6 +24,17 @@ describe("digest", () => {
   test("bigint does not throw and is value-sensitive", () => {
     expect(() => digest({ big: 10n })).not.toThrow();
     expect(digest({ big: 10n })).not.toBe(digest({ big: 11n }));
+  });
+});
+
+describe("preview", () => {
+  test("short values pass through as stable JSON", () => {
+    expect(preview({ n: 5 })).toBe('{"n":5}');
+  });
+  test("long values are truncated with a trailing ellipsis", () => {
+    const p = preview({ s: "x".repeat(200) }, 40);
+    expect(p.length).toBe(41); // 40 sliced chars + the "…"
+    expect(p.endsWith("…")).toBe(true);
   });
 });
 

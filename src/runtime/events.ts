@@ -75,6 +75,12 @@ export function digest(v: unknown): string {
   return h.toString(16).padStart(16, "0");
 }
 
+/** Human-readable, truncated stable stringification — for divergence messages, never for keys. */
+export function preview(v: unknown, max = 120): string {
+  const s = stableStringify(v);
+  return s.length <= max ? s : `${s.slice(0, max)}…`;
+}
+
 /** memo position key — epoch is baked into the scope path (name#epoch). */
 export function posKey(scope: string, ordinal: number, op: string): string {
   return `${scope}|${ordinal}|${op}`;
