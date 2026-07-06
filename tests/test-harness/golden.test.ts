@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { rmSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { goldenPath, goldenExists, readGolden, writeGolden } from "../../src/test/golden";
 import type { Event } from "../../src/runtime/events";
 
@@ -36,6 +36,18 @@ test("ts is normalized to empty string on write (stable diffs)", () => {
     writeGolden(p, { entry: "toy", input: null, events: [ev(0)] });
     const g = readGolden(p);
     expect(g.events[0]!.ts).toBe("");
+  } finally {
+    rmSync(`${TMP}/__golden__`, { recursive: true, force: true });
+  }
+});
+
+test("readGolden rejects an unsupported loopyGoldenVersion", () => {
+  // Hand-write a raw golden (writeGolden always stamps version 1, so bypass it).
+  const p = `${TMP}/__golden__/v2.json`;
+  try {
+    mkdirSync(`${TMP}/__golden__`, { recursive: true });
+    writeFileSync(p, JSON.stringify({ loopyGoldenVersion: 2, entry: "toy", input: null, events: [] }));
+    expect(() => readGolden(p)).toThrow(/unsupported loopyGoldenVersion 2/);
   } finally {
     rmSync(`${TMP}/__golden__`, { recursive: true, force: true });
   }
