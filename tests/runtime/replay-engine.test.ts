@@ -44,6 +44,9 @@ test("effect-arg divergence: different input → tool args digest mismatch, loca
   const r = await replayThread({ driver: toyDriver(), goldenEvents: golden, entry: "toy", input: { n: 6 } });
   expect(r.divergence?.kind).toBe("effect");
   expect(r.divergence?.pos).toContain("a#1"); // the diverging node position
+  // ⓒ: the divergence surfaces the recorded-vs-live values, not just their digests
+  expect(r.divergence?.expectedPreview).toContain('"n":5');
+  expect(r.divergence?.actualPreview).toContain('"n":6');
 });
 
 test("new-branch divergence: a router that visits an unrecorded node → miss divergence", async () => {
@@ -70,6 +73,48 @@ test("output divergence: same effects, different returns projection → output m
   const r = await replayThread({ driver: patched, goldenEvents: golden, entry: "toy", input: { n: 5 } });
   expect(r.divergence?.kind).toBe("output");
   expect(r.divergence?.pos).toBe("<run-output>");
+  // ⓒ: output divergence shows both projections, not just digests
+  expect(r.divergence?.expectedPreview).toContain('"result":50');
+  expect(r.divergence?.actualPreview).toContain('"result":51');
+});
+
+// ⓒ: a replay that requests a clock/random/sleep effect the golden lacks used to report
+// actual="" — meaningless. It now names the op (resolving the empty-actual label).
+test("effect-miss on a clock read → actual names the op (now()), not empty", async () => {
+  const golden = await record(toyDriver(), { n: 5 });
+  const variant = toyDriver();
+  const patched: Driver = {
+    ...variant,
+    node: () =>
+      ({
+        reads: (s) => ({ n: (s.input as { n: number }).n }),
+        run: async (i, ctx) => {
+          ctx.now(); // an effect absent from the golden → first divergence
+          return i;
+        },
+      }) as RunnableNode,
+  };
+  const r = await replayThread({ driver: patched, goldenEvents: golden, entry: "toy", input: { n: 5 } });
+  expect(r.divergence?.kind).toBe("effect");
+  expect(r.divergence?.actual).toBe("now()");
+});
+
+test("effect-miss on a sleep → actual label carries the duration", async () => {
+  const golden = await record(toyDriver(), { n: 5 });
+  const variant = toyDriver();
+  const patched: Driver = {
+    ...variant,
+    node: () =>
+      ({
+        reads: (s) => ({ n: (s.input as { n: number }).n }),
+        run: async (i, ctx) => {
+          await ctx.sleep(500);
+          return i;
+        },
+      }) as RunnableNode,
+  };
+  const r = await replayThread({ driver: patched, goldenEvents: golden, entry: "toy", input: { n: 5 } });
+  expect(r.divergence?.actual).toBe("sleep(500ms)");
 });
 
 test("guard: an empty golden log → rejects (not a completed run)", async () => {

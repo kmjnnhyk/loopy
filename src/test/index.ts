@@ -35,14 +35,16 @@ export function replayFixture(runtime: Runtime<any>, opts: ReplayFixtureOpts): R
         // that impurity is observable (the immediate self-replay sees the mutated state).
         const rec = await handle.replay(name, input, events);
         if (rec.divergence) {
-          throw new ReplayDivergence(rec.divergence.pos, rec.divergence.expected, rec.divergence.actual);
+          const d = rec.divergence;
+          throw new ReplayDivergence(d.pos, d.expected, d.actual, d.expectedPreview, d.actualPreview);
         }
         return { output: rec.output };
       }
       const golden = readGolden(path);
       const res = await handle.replay(name, input, golden.events);
       if (res.divergence) {
-        throw new ReplayDivergence(res.divergence.pos, res.divergence.expected, res.divergence.actual);
+        const d = res.divergence;
+        throw new ReplayDivergence(d.pos, d.expected, d.actual, d.expectedPreview, d.actualPreview);
       }
       return { output: res.output };
     },

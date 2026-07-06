@@ -1,7 +1,7 @@
 import { Memo, EventSession, ReplayDivergence } from "./effects";
 import { runGraph, type Driver, type KernelCtx } from "./scheduler";
 import { memoryStore } from "./store";
-import { digest, runId as mkRunId, stableStringify, threadId as mkThreadId, type Event } from "./events";
+import { digest, preview, runId as mkRunId, stableStringify, threadId as mkThreadId, type Event } from "./events";
 import type { ModelClient, ModelResponse } from "./model";
 
 export interface ReplayDivergenceInfo {
@@ -9,6 +9,9 @@ export interface ReplayDivergenceInfo {
   readonly pos: string;
   readonly expected: string;
   readonly actual: string;
+  /** recorded/replayed value previews — present when the divergence carries concrete values */
+  readonly expectedPreview?: string;
+  readonly actualPreview?: string;
 }
 export interface ReplayResult {
   readonly output: unknown;
@@ -61,13 +64,30 @@ export async function replayThread(o: {
     if (stableStringify(output) !== stableStringify(goldenOutput)) {
       return {
         output,
-        divergence: { kind: "output", pos: "<run-output>", expected: digest(goldenOutput), actual: digest(output) },
+        divergence: {
+          kind: "output",
+          pos: "<run-output>",
+          expected: digest(goldenOutput),
+          actual: digest(output),
+          expectedPreview: preview(goldenOutput),
+          actualPreview: preview(output),
+        },
       };
     }
     return { output, divergence: null };
   } catch (err) {
     if (err instanceof ReplayDivergence) {
-      return { output: undefined, divergence: { kind: "effect", pos: err.pos, expected: err.expected, actual: err.actual } };
+      return {
+        output: undefined,
+        divergence: {
+          kind: "effect",
+          pos: err.pos,
+          expected: err.expected,
+          actual: err.actual,
+          expectedPreview: err.expectedPreview,
+          actualPreview: err.actualPreview,
+        },
+      };
     }
     throw err; // genuine infra/domain error — fail loud
   }

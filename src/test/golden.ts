@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import type { Event } from "../runtime/events";
+import { digest, type Event } from "../runtime/events";
 
 export interface GoldenFile {
   readonly loopyGoldenVersion: 1;
@@ -21,7 +21,9 @@ function sanitize(name: string): string {
 }
 
 export function goldenPath(dir: string, testName: string): string {
-  return join(dir, "__golden__", `${sanitize(testName)}.json`);
+  // digest is over the RAW name, so names that sanitize to the same stem
+  // (differ only in ":" / "/" / whitespace) still get distinct files.
+  return join(dir, "__golden__", `${sanitize(testName)}.${digest(testName).slice(0, 8)}.json`);
 }
 
 export function goldenExists(path: string): boolean {
