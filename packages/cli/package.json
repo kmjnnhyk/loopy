@@ -1,0 +1,9 @@
+{
+  "name": "@loopyjs/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "loopy CLI — loopy test [-u]",
+  "bin": { "loopy": "./dist/cli.js" },
+  "files": ["dist", "src"],
+  "peerDependencies": { "@loopyjs/core": "workspace:*", "@loopyjs/test": "workspace:*" }
+}
