@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { goldenPath, goldenExists, readGolden, writeGolden } from "../../src/test/golden";
-import { digest, type Event } from "../../src/runtime/events";
+import { goldenPath, goldenExists, readGolden, writeGolden } from "../src/golden.ts";
+import { digest, type RuntimeEvent as Event } from "@loopyjs/core";
 
 const TMP = "/tmp/loopy-golden-test";
 

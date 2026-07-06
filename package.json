@@ -13,6 +13,7 @@
   "devDependencies": {
     "@types/bun": "^1.3.14",
     "typescript": "^6",
-    "@loopyjs/core": "workspace:*"
+    "@loopyjs/core": "workspace:*",
+    "@loopyjs/test": "workspace:*"
   }
 }

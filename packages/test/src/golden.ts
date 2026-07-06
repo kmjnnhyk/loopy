@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { digest, type Event } from "../runtime/events";
+import { digest, type RuntimeEvent as Event } from "@loopyjs/core";
 
 export interface GoldenFile {
   readonly loopyGoldenVersion: 1;

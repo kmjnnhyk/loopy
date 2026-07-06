@@ -1,6 +1,6 @@
 import { test as bunTest } from "bun:test";
-import { ReplayDivergence, type Runtime } from "loopy";
-import { goldenExists, goldenPath, readGolden, writeGolden } from "./golden";
+import { ReplayDivergence, type Runtime } from "@loopyjs/core";
+import { goldenExists, goldenPath, readGolden, writeGolden } from "./golden.ts";
 
 export interface ReplayCtx {
   replay(name: string, input: unknown): Promise<{ output: unknown }>;

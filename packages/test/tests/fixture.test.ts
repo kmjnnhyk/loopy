@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import { rmSync } from "node:fs";
-import { defineLoopy, workflow, step, node, io, lastChannel, END, ReplayDivergence } from "loopy";
-import { replayFixture } from "../../src/test";
-import { goldenPath, goldenExists } from "../../src/test/golden";
+import { defineLoopy, workflow, step, node, io, lastChannel, END, ReplayDivergence } from "@loopyjs/core";
+import { replayFixture } from "@loopyjs/test";
+import { goldenPath, goldenExists } from "../src/golden.ts";
 
 const TMP = "/tmp/loopy-fixture-test";
 const cleanup = () => rmSync(`${TMP}/__golden__`, { recursive: true, force: true });
