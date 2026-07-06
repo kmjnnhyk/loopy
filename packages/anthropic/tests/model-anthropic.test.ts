@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { anthropic } from "../../src/runtime/model-anthropic";
+import { anthropic } from "@loopyjs/anthropic";
 
 test("request/response mapping against a fake SDK client", async () => {
   let captured: Record<string, unknown> = {};

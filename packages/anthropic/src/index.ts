@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { ModelClient, ModelMsg, ModelRequest, ModelResponse, ToolCallReq } from "./model";
+import type { ModelClient, ModelMsg, ModelRequest, ModelResponse, ToolCallReq } from "@loopyjs/core";
 
 export interface AnthropicLike {
   messages: { create(params: Record<string, unknown>): Promise<unknown> };

@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { anthropic } from "../../src/runtime/model-anthropic";
+import { anthropic } from "@loopyjs/anthropic";
 
 test.skipIf(!process.env.ANTHROPIC_API_KEY)("live smoke: one real completion", async () => {
   const client = anthropic("claude-haiku-4-5-20251001");

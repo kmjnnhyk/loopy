@@ -840,7 +840,7 @@ export function team<
 export { memoryStore } from "./runtime/store.ts";
 export type { Checkpointer, Snapshot } from "./runtime/store.ts";
 export { stubModel } from "./runtime/model.ts";
-export type { ModelClient, ModelRequest, ModelResponse, ModelMsg, StubModel } from "./runtime/model.ts";
+export type { ModelClient, ModelRequest, ModelResponse, ModelMsg, StubModel, ToolCallReq } from "./runtime/model.ts";
 export { RunSuspended } from "./runtime/scheduler.ts";
 export { ReplayDivergence } from "./runtime/effects.ts";
 export { AgentMaxStepsError } from "./runtime/drivers/agent.ts";
