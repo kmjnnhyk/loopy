@@ -3,11 +3,14 @@
   "version": "0.1.0",
   "type": "module",
   "private": true,
-  "description": "loopy monorepo — type-safe TS DSL for LLM agents",
-  "workspaces": ["packages/*"],
+  "description": "loopy monorepo \u2014 type-safe TS DSL for LLM agents",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "build": "tsc --build",
-    "check": "tsc --build && tsc -p tsconfig.examples.json && tsc -p tsconfig.negative.json && bun test",
+    "check:negative": "test \"$(tsc -p tsconfig.negative.json 2>&1 | grep -c 'error TS')\" = \"8\"",
+    "check": "tsc --build && tsc -p tsconfig.examples.json && bun run check:negative && bun test",
     "test": "bun test"
   },
   "devDependencies": {
