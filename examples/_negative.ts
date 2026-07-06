@@ -1,6 +1,6 @@
 // MUST-error fixtures. Excluded from the positive build; compiled standalone via
 // tsconfig.negative.json to capture the exact diagnostic codes at the seam.
-import { workflow, io, lastChannel, defineLoopy, team, agent, inputChannel, node, step, END } from "loopy";
+import { workflow, io, lastChannel, defineLoopy, team, agent, inputChannel, node, step, END } from "@loopyjs/core";
 import type { GitRepo, FigmaApi, JiraApi, VercelApi, GitCli, GitHubCli } from "./deps";
 import { fetchFigma } from "./tools";
 import { fileAnalyzer, codeGen, verifier, classifier, sufficiency } from "./agents";

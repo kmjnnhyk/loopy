@@ -1,6 +1,6 @@
 // Consumer-side reads — the actual seam assertions. These compile-check the
 // .d.ts boundary; the emitted forms are read by hand for hover cleanliness.
-import type { ToolDepKeys, StateOf } from "loopy";
+import type { ToolDepKeys, StateOf } from "@loopyjs/core";
 import { codeGen } from "./agents";
 import { jiraFlow } from "./workflows";
 import type { BaseBranchChoice, UserClarification } from "./workflows";

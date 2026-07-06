@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { defineLoopy, stubModel } from "loopy";
+import { defineLoopy, stubModel } from "@loopyjs/core";
 import { designFlow } from "../../examples/workflows";
 import { classifier, sufficiency, fileAnalyzer, verifier, codeGen } from "../../examples/agents";
 import { stubDeps } from "../anchors/designflow.test";

@@ -1,13 +1,8 @@
 import { expect, test } from "bun:test";
-import { defineLoopy, stubModel, memoryStore, END } from "loopy";
-import { verifyReplay } from "../../src/runtime/verify";
-import { workflowDriver } from "../../src/runtime/drivers/workflow";
-import { agentNode } from "../../src/runtime/drivers/agent";
-import { runThread, RunSuspended, type Driver, type RunnableNode } from "../../src/runtime/scheduler";
-import { rawChannel } from "../../src/runtime/channels";
+import { defineLoopy, stubModel, memoryStore, END, verifyReplay, RunSuspended } from "@loopyjs/core";
+import { workflowDriver, agentNode, runThread, type Driver, type RunnableNode, rawChannel, threadId } from "@loopyjs/core/internal";
 import { designFlow } from "../../examples/workflows";
 import { classifier, sufficiency, fileAnalyzer, verifier, codeGen } from "../../examples/agents";
-import { threadId } from "../../src/runtime/events";
 import { stubDeps } from "./designflow.test";
 
 const answer = (o: unknown) => ({ text: JSON.stringify(o), stopReason: "end_turn" });

@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
-import { defineLoopy, stubModel } from "loopy";
-import { defineLoopyTest } from "loopy/test";
+import { defineLoopy, stubModel } from "@loopyjs/core";
+import { defineLoopyTest } from "@loopyjs/test";
 import { designFlow } from "../../examples/workflows";
 import { fileAnalyzer, verifier, codeGen } from "../../examples/agents";
 import { stubDeps } from "../anchors/designflow.test";

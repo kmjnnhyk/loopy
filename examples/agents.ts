@@ -1,6 +1,6 @@
 // 5 agents — model-owning loops. codeGen mixes a sub-agent (fileAnalyzer) into
 // its `tools`, exercising the Step supertype (sub-agent-as-tool).
-import { agent, io } from "loopy";
+import { agent, io } from "@loopyjs/core";
 import { editFile, createFile, readFile } from "./tools";
 
 export const classifier = agent({

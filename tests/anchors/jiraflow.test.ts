@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { defineLoopy, stubModel, RunSuspended, memoryStore } from "loopy";
+import { defineLoopy, stubModel, RunSuspended, memoryStore } from "@loopyjs/core";
 import { jiraFlow } from "../../examples/workflows";
 import { classifier, sufficiency, fileAnalyzer, verifier, codeGen } from "../../examples/agents";
 import { stubDeps } from "./designflow.test";

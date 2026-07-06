@@ -31,7 +31,7 @@ import type { ReplayResult } from "./runtime/replay.ts";
  * §0 — Dependency registry (augmentable) + capability contexts
  * ========================================================================== */
 
-/** Consumers augment via `declare module "loopy" { interface LoopyDeps {…} }`. */
+/** Consumers augment via `declare module "@loopyjs/core" { interface LoopyDeps {…} }`. */
 export interface LoopyDeps {}
 
 /** A tool's run-context: only the *declared* slice of deps, nothing else. */

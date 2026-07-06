@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { defineLoopy, loopy, memoryStore, stubModel, workflow, step, node, io, lastChannel, END } from "loopy";
+import { defineLoopy, loopy, memoryStore, stubModel, workflow, step, node, io, lastChannel, END } from "@loopyjs/core";
 import { designFlow } from "../../examples/workflows";
 import { classifier, sufficiency, fileAnalyzer, verifier, codeGen } from "../../examples/agents";
 import type { GitRepo, FigmaApi, VercelApi, GitCli, GitHubCli, JiraApi, Shell } from "../../examples/deps";
