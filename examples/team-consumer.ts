@@ -1,6 +1,6 @@
 // team seam assertions (P1–P7). Compile-checks the .d.ts boundary; the emitted
 // forms are hand-read by the main session for hover cleanliness (spec §10).
-import type { PassToOf, PassToolNames, TeamInputOf, StateOf, TeamFullState, Msg, GuardAgents, TeamRouterReturn, WritesResult, InputOf, RequiredDeps } from "loopy";
+import type { PassToOf, PassToolNames, TeamInputOf, StateOf, TeamFullState, Msg, GuardAgents, TeamRouterReturn, WritesResult, InputOf, RequiredDeps } from "@loopyjs/core";
 import { triage, reviewer, triageState, bugFixer, docsWriter, prTriage, requestApproval, teamRt } from "./team";
 import type { Issue, ReviewResult } from "./team";
 

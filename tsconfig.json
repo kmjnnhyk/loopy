@@ -1,26 +1,9 @@
 {
-  "compilerOptions": {
-    "target": "ESNext",
-    "module": "Preserve",
-    "moduleResolution": "Bundler",
-    "lib": ["ESNext"],
-    "types": ["bun"],
-
-    "strict": true,
-    "isolatedDeclarations": true,
-    "declaration": true,
-    "emitDeclarationOnly": true,
-
-    "outDir": "dist",
-    "rootDir": ".",
-    "paths": {
-      "loopy": ["./src/index.ts"]
-    },
-
-    "verbatimModuleSyntax": true,
-    "skipLibCheck": true,
-    "noEmitOnError": false,
-    "noUncheckedIndexedAccess": true
-  },
-  "include": ["src"]
+  "files": [],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/anthropic" },
+    { "path": "./packages/test" },
+    { "path": "./packages/cli" }
+  ]
 }

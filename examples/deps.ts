@@ -45,7 +45,7 @@ export interface Shell {
   claude(repoPath: string, prompt: string): Promise<ClaudeResult>;
 }
 
-declare module "loopy" {
+declare module "@loopyjs/core" {
   interface LoopyDeps {
     repo: GitRepo;
     figma: FigmaApi;

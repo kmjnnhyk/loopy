@@ -1,5 +1,5 @@
 // 2 workflows — node() bindings + .returns() (runtime spec §5). jiraFlow: interrupt 2x.
-import { workflow, step, node, io, lastChannel, END } from "loopy";
+import { workflow, step, node, io, lastChannel, END } from "@loopyjs/core";
 import { fetchFigma, getIssue, openPR, waitForDeploy } from "./tools";
 import { fileAnalyzer, codeGen, verifier, sufficiency } from "./agents";
 import type { FigmaData, DeployResult, JiraIssue } from "./deps";

@@ -1,8 +1,7 @@
 import { expect, test } from "bun:test";
-import { defineLoopy, stubModel, RunSuspended, memoryStore } from "loopy";
-import { TeamMaxTurnsError } from "../../src/runtime/drivers/team";
+import { defineLoopy, stubModel, RunSuspended, memoryStore, TeamMaxTurnsError } from "@loopyjs/core";
+import { threadId } from "@loopyjs/core/internal";
 import { prTriage } from "../../examples/team";
-import { threadId } from "../../src/runtime/events";
 import type { GitRepo } from "../../examples/deps";
 
 const repo: GitRepo = { read: async () => "", write: async () => {}, find: async () => [] };
@@ -52,7 +51,7 @@ test("A3 prTriage: passTo 핸드오프 → HITL → 반려 재진입(epoch) → 
 });
 
 test("maxTurns 초과 → TeamMaxTurnsError (정상 반환 아님)", async () => {
-  const { team, agent, io, inputChannel } = await import("loopy");
+  const { team, agent, io, inputChannel } = await import("@loopyjs/core");
   const a = agent({ name: "a", model: "opus", instructions: "x", input: io<{ seed: number }>(), output: io<{ ok: boolean }>() });
   const ping = team({ name: "ping", entry: "a", state: { seed: inputChannel<number>() }, agents: { a }, maxTurns: 3 })
     .router(() => "a"); // 방금 끝낸 에이전트 재반환 — 무진전 루프

@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import { rmSync } from "node:fs";
-import { defineLoopy, stubModel } from "loopy";
+import { defineLoopy, stubModel } from "@loopyjs/core";
 import { classifier } from "../../examples/agents";
-import { replayFixture } from "../../src/test";
+import { replayFixture } from "@loopyjs/test";
 
 const answer = (o: unknown) => ({ text: JSON.stringify(o), stopReason: "end_turn" });
 

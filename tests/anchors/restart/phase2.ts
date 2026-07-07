@@ -1,5 +1,6 @@
 // 완전히 새 프로세스: 같은 sqlite 파일에서 resume 2회 → 최종 출력 출력
-import { defineLoopy, stubModel, sqliteStore, RunSuspended } from "loopy";
+import { defineLoopy, stubModel, RunSuspended } from "@loopyjs/core";
+import { sqliteStore } from "@loopyjs/core/sqlite";
 import { jiraFlow } from "../../../examples/workflows";
 import { classifier, sufficiency, fileAnalyzer, verifier, codeGen } from "../../../examples/agents";
 

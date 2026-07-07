@@ -1,5 +1,5 @@
 // defineLoopy registry: 7 deps + 5 agents + 2 workflows → typed rt.run(...).
-import { defineLoopy, loopy } from "loopy";
+import { defineLoopy, loopy } from "@loopyjs/core";
 import type { GitRepo, FigmaApi, JiraApi, VercelApi, GitCli, GitHubCli, Shell } from "./deps";
 import { classifier, sufficiency, fileAnalyzer, verifier, codeGen } from "./agents";
 import { designFlow, jiraFlow } from "./workflows";

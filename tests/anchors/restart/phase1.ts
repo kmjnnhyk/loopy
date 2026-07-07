@@ -1,5 +1,6 @@
 // 실제 별도 프로세스로 실행됨: jiraFlow를 첫 suspend까지 → exit 0
-import { defineLoopy, stubModel, sqliteStore, RunSuspended } from "loopy";
+import { defineLoopy, stubModel, RunSuspended } from "@loopyjs/core";
+import { sqliteStore } from "@loopyjs/core/sqlite";
 import { jiraFlow } from "../../../examples/workflows";
 import { classifier, sufficiency, fileAnalyzer, verifier, codeGen } from "../../../examples/agents";
 

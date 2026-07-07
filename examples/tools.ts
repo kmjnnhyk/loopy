@@ -1,6 +1,6 @@
 // 10 tools — model-less, deps declared. editFile/createFile carry idempotencyKey
 // to demo the at-least-once durability contract.
-import { tool, io } from "loopy";
+import { tool, io } from "@loopyjs/core";
 import type { FigmaData, JiraIssue, DeployResult } from "./deps";
 
 export const editFile = tool({
