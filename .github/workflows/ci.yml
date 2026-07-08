@@ -1,0 +1,47 @@
+# Test CI — runs the full gate on every PR and every push to master.
+# The repo is a Bun workspace; `bun run check` is the single gate
+# (tsc --build across all 5 packages + examples emit + negative==8 + bun test).
+# The devtools Playwright e2e runs as a separate job (it needs a browser).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.15
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.15
+      - run: bun install --frozen-lockfile
+      # Build dist/ first: the Playwright webServer runs `vite build` under Node,
+      # which resolves `@loopyjs/core` via its `default` (dist) export condition —
+      # so dist must exist (a clean checkout has none).
+      - run: bun run build
+      # The Playwright config's webServer builds the browser bundle and boots the
+      # dev server itself; we only need the browser binary here.
+      - run: bunx playwright install --with-deps chromium
+        working-directory: packages/devtools
+      - run: bun run test:e2e
+        working-directory: packages/devtools
