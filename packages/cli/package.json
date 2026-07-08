@@ -2,7 +2,7 @@
   "name": "@loopyjs/cli",
   "version": "0.1.0",
   "type": "module",
-  "description": "loopy CLI — loopy test [-u]",
+  "description": "loopy CLI — loopy test [-u], loopy dev <module>",
   "license": "MIT",
   "repository": { "type": "git", "url": "git+https://github.com/kmjnnhyk/loopy.git", "directory": "packages/cli" },
   "homepage": "https://loopy.js.org",

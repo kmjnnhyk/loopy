@@ -10,6 +10,19 @@ export function resolveRuntime(mod: Record<string, unknown>): DevRuntime {
   return rt;
 }
 
+export function parseDevArgs(rest: string[]): { modPath: string | undefined; port: number } {
+  let modPath: string | undefined;
+  let port = 5173;
+  for (let i = 0; i < rest.length; i++) {
+    const a = rest[i]!;
+    if (a === "--port") { port = Number(rest[++i]); continue; }        // consume the next token as the value
+    if (a.startsWith("--port=")) { port = Number(a.slice("--port=".length)); continue; }
+    if (a.startsWith("--")) continue;                                   // ignore any other flags
+    if (modPath === undefined) modPath = a;                             // first bare token wins
+  }
+  return { modPath, port };
+}
+
 async function main(): Promise<void> {
   const [cmd, ...rest] = process.argv.slice(2);
 
@@ -22,10 +35,8 @@ async function main(): Promise<void> {
   }
 
   if (cmd === "dev") {
-    const modPath = rest.find((a) => !a.startsWith("--"));
+    const { modPath, port } = parseDevArgs(rest);
     if (!modPath) { console.error("usage: loopy dev <module> [--port N]"); process.exit(2); }
-    const portArg = rest.find((a) => a.startsWith("--port"));
-    const port = portArg ? Number(portArg.split("=")[1] ?? rest[rest.indexOf(portArg) + 1]) : 5173;
     const { startDevServer } = await import("@loopyjs/devtools");
     const mod = (await import(Bun.resolveSync(modPath, process.cwd()))) as Record<string, unknown>;
     const runtime = resolveRuntime(mod);

@@ -28,6 +28,7 @@
       },
       "peerDependencies": {
         "@loopyjs/core": "workspace:*",
+        "@loopyjs/devtools": "workspace:*",
         "@loopyjs/test": "workspace:*",
       },
     },
