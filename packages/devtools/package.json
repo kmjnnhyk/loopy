@@ -1,0 +1,28 @@
+{
+  "name": "@loopyjs/devtools",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "loopy dev — local read-only observability web UI (Bun)",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/kmjnnhyk/loopy.git", "directory": "packages/devtools" },
+  "homepage": "https://loopy.js.org",
+  "publishConfig": { "access": "public" },
+  "exports": {
+    ".": { "bun": "./src/index.ts", "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+  },
+  "files": ["dist", "src", "browser/dist"],
+  "peerDependencies": { "@loopyjs/core": "workspace:*" },
+  "devDependencies": {
+    "@loopyjs/core": "workspace:*",
+    "react": "^19",
+    "react-dom": "^19",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@xyflow/react": "^12",
+    "@dagrejs/dagre": "^1",
+    "@astryxdesign/core": "*",
+    "@astryxdesign/theme-neutral": "*",
+    "vite": "^7",
+    "@vitejs/plugin-react": "^5"
+  }
+}

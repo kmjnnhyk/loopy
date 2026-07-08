@@ -4,6 +4,7 @@
     { "path": "./packages/core" },
     { "path": "./packages/anthropic" },
     { "path": "./packages/test" },
-    { "path": "./packages/cli" }
+    { "path": "./packages/cli" },
+    { "path": "./packages/devtools" }
   ]
 }
