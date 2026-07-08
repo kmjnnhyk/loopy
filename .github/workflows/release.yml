@@ -1,0 +1,67 @@
+# Release — publishes all 5 @loopyjs packages to npm via OIDC Trusted Publishing
+# (no token, automatic provenance). Triggered by pushing a version tag (v0.1.1)
+# or manually (workflow_dispatch, choose the dist-tag).
+#
+# ONE-TIME SETUP (per package, on npmjs.com — see RELEASING.md): configure a
+# Trusted Publisher for @loopyjs/{core,anthropic,test,cli,devtools} pointing at
+# this repo + workflow `release.yml`. Until that exists, publishing 403s.
+#
+# Build/publish split: Bun builds (it resolves `workspace:` from the local
+# workspace); then scripts/prepare-publish.mjs rewrites `workspace:^` -> `^0.1.0`
+# (npm can't rewrite workspace:); then `npm publish --ignore-scripts` uploads the
+# pre-built packages with OIDC + provenance.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "npm dist-tag to publish under"
+        default: "next"
+        type: string
+
+permissions:
+  contents: read
+  id-token: write # required for OIDC Trusted Publishing
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node 22 (>=22.14) + npm >=11.5.1 are required for OIDC trusted publishing.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+      - run: npm install -g npm@latest
+      - run: npm --version # sanity: must be >= 11.5.1
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.15
+
+      - run: bun install --frozen-lockfile
+
+      # Build everything WHILE workspace: is still intact (Bun resolves it locally).
+      - run: bun run build # tsc --build -> dist/ for all packages
+      - run: bun run build # devtools browser bundle -> browser/dist (bunx vite build)
+        working-directory: packages/devtools
+
+      # npm doesn't understand workspace: — rewrite to ^<version> before publishing.
+      - run: node scripts/prepare-publish.mjs
+
+      # Publish in dependency order. --ignore-scripts because everything is
+      # pre-built above (skips devtools' prepublishOnly, which needs bun).
+      # No NODE_AUTH_TOKEN: OIDC trusted publishing supplies auth + provenance.
+      - name: Publish to npm (OIDC trusted publishing)
+        run: |
+          TAG="${{ github.event.inputs.tag || 'next' }}"
+          for pkg in core anthropic test devtools cli; do
+            echo "::group::publish @loopyjs/$pkg (--tag $TAG)"
+            npm publish --workspace "@loopyjs/$pkg" --tag "$TAG" --ignore-scripts
+            echo "::endgroup::"
+          done
