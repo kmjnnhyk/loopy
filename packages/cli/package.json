@@ -9,5 +9,5 @@
   "publishConfig": { "access": "public" },
   "bin": { "loopy": "./dist/cli.js" },
   "files": ["dist", "src"],
-  "peerDependencies": { "@loopyjs/core": "workspace:*", "@loopyjs/test": "workspace:*" }
+  "peerDependencies": { "@loopyjs/core": "workspace:*", "@loopyjs/test": "workspace:*", "@loopyjs/devtools": "workspace:*" }
 }
