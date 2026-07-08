@@ -8,6 +8,9 @@ export function fold(events: readonly RuntimeEvent[], uptoSeq?: number): ViewMod
   const vm: ViewModel = { threadId: null, entry: null, status: "idle", timeline: [], details: {}, lastSeq: -1 };
   const rows = new Map<string, TimelineRow>();
   const details = vm.details;
+  // Pair ToolReturned to its ToolCalled by effectId (not array position): concurrent
+  // tool calls return in COMPLETION order, not call order, so "last pushed" misattributes.
+  const toolByEffect = new Map<number, StepDetail["tools"][number]>();
   let inFlight: string | null = null;
 
   for (const e of events) {
@@ -41,10 +44,14 @@ export function fold(events: readonly RuntimeEvent[], uptoSeq?: number): ViewMod
         if (d.model) { d.model.response = e.ok ? e.value : e.error; d.model.ok = e.ok; }
         break;
       }
-      case "ToolCalled": (details[e.node] ??= emptyDetail(e.node)).tools.push({ tool: e.tool, args: e.args, value: null, ok: false }); break;
+      case "ToolCalled": {
+        const entry = { tool: e.tool, args: e.args, value: null as unknown, ok: false };
+        (details[e.node] ??= emptyDetail(e.node)).tools.push(entry);
+        toolByEffect.set(e.effectId, entry);
+        break;
+      }
       case "ToolReturned": {
-        const d = (details[e.node] ??= emptyDetail(e.node));
-        const t = d.tools[d.tools.length - 1];
+        const t = toolByEffect.get(e.effectId);
         if (t) { t.value = e.ok ? e.value : e.error; t.ok = e.ok; }
         break;
       }

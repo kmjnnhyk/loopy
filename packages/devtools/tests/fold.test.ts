@@ -42,6 +42,23 @@ test("uptoSeq scrubs to a point in time (read-only time travel)", () => {
   expect(vm.lastSeq).toBe(3);
 });
 
+test("concurrent tool calls: returns pair by effectId, not array position", () => {
+  const clog: RuntimeEvent[] = [
+    { ...base, seq: 0, type: "RunStarted", entry: "wf", input: {}, node: "" },
+    { ...base, seq: 1, type: "StepStarted", node: "p#1" },
+    { ...base, seq: 2, type: "ToolCalled", node: "p#1", effectId: 1, posKey: "p#1|0|tool", argsDigest: "d", tool: "toolA", args: { a: 1 } },
+    { ...base, seq: 3, type: "ToolCalled", node: "p#1", effectId: 2, posKey: "p#1|1|tool", argsDigest: "d", tool: "toolB", args: { b: 2 } },
+    { ...base, seq: 4, type: "ToolReturned", node: "p#1", effectId: 2, ok: true, value: "B" }, // second-called returns first
+    { ...base, seq: 5, type: "ToolReturned", node: "p#1", effectId: 1, ok: true, value: "A" }, // first-called returns second
+    { ...base, seq: 6, type: "StepEnded", node: "p#1" },
+  ] as unknown as RuntimeEvent[];
+  const vm = fold(clog);
+  expect(vm.details["p#1"]!.tools).toEqual([
+    { tool: "toolA", args: { a: 1 }, value: "A", ok: true },
+    { tool: "toolB", args: { b: 2 }, value: "B", ok: true },
+  ]);
+});
+
 test("RunErrored → status errored, in-flight step errored", () => {
   const errLog = log.slice(0, 7).concat([{ ...base, seq: 7, type: "RunErrored", node: "", error: { name: "E", message: "boom" } } as unknown as RuntimeEvent]);
   const vm = fold(errLog);
