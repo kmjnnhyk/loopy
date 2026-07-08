@@ -3,6 +3,8 @@ dist/
 dist-examples/
 *.tsbuildinfo
 .remember/
+test-results/
+playwright-report/
 
 # Internal design / planning / brainstorming artifacts — kept on disk locally,
 # not published to the public repo. Root-anchored (/docs/) so it does NOT match

@@ -11,6 +11,9 @@
     ".": { "bun": "./src/index.ts", "types": "./dist/index.d.ts", "default": "./dist/index.js" }
   },
   "files": ["dist", "src", "browser/dist"],
+  "scripts": {
+    "test:e2e": "playwright test"
+  },
   "peerDependencies": { "@loopyjs/core": "workspace:*" },
   "devDependencies": {
     "@loopyjs/core": "workspace:*",
@@ -23,6 +26,7 @@
     "@astryxdesign/core": "*",
     "@astryxdesign/theme-neutral": "*",
     "vite": "^7",
-    "@vitejs/plugin-react": "^5"
+    "@vitejs/plugin-react": "^5",
+    "@playwright/test": "^1"
   }
 }
