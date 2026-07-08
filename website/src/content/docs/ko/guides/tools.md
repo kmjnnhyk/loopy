@@ -17,7 +17,7 @@ export interface GitRepo {
   find(query: string): Promise<readonly string[]>;
 }
 
-declare module "loopy" {
+declare module "@loopyjs/core" {
   interface LoopyDeps {
     repo: GitRepo;
   }
@@ -28,10 +28,10 @@ declare module "loopy" {
 
 ## 2. 입력과 출력의 형태 잡기
 
-툴의 `input`/`output`은 [`IO<...>`](/ko/core-concepts/schemas/) 스키마예요. 프로토타입 단계에서 `io<T>()`는 정적 타입은 그대로 주면서, 검증기 자리에는 항등 함수 하나만 채워 넣어요:
+툴의 `input`/`output`은 [`IO<...>`](/ko/core-concepts/schemas/) 스키마예요. 내장 `io<T>()`는 정적 타입을 그대로 주면서 검증기 자리엔 항등 함수를 채워 넣어요. 실제 런타임 강제 변환이 필요하면 Zod, Valibot, ArkType으로 바꿔 끼우면 돼요:
 
 ```ts
-import { io } from "loopy";
+import { io } from "@loopyjs/core";
 
 const input = io<{ path: string; find: string; replace: string }>();
 const output = io<{ applied: boolean }>();
@@ -40,7 +40,7 @@ const output = io<{ applied: boolean }>();
 ## 3. 툴 작성하기
 
 ```ts
-import { tool, io } from "loopy";
+import { tool, io } from "@loopyjs/core";
 
 export const editFile = tool({
   name: "editFile",

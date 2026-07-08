@@ -1,45 +1,90 @@
 ---
 title: 빠른 시작
-description: loopy를 클론하고 타입 설계를 직접 확인해 보세요. 아직 npm 패키지는 없어요.
-banner:
-  content: |
-    loopy는 아직 프로토타입이에요. 타입 설계는 완성되어 컴파일로 검증을 마쳤지만, 런타임은 구현 전이에요. <a href="/ko/status-roadmap/">현황과 로드맵</a>에서 자세히 확인할 수 있어요.
+description: loopy를 설치하고 몇 분 안에 첫 프로그램을 실행해 보세요.
 ---
 
 ## 지금 loopy로 할 수 있는 것
 
-loopy는 **설계·프로토타입 단계**예요. 레포지토리에는 완전히 타입 검증을 마친 API 설계, 즉 타입 표면(type surface)이 들어 있어요. `src/index.ts`가 `tool`, `agent`, `workflow`, `defineLoopy`, `loopy`, 채널 생성자 같은 팩토리를 실제로 내보내지만, 런타임 구현부는 전부 의도적으로 비워 뒀어요. 컨트롤 루프도, 이벤트 리플레이도, 휴먼 인 더 루프 실행도 아직 없어요. 그러니까 **loopy 프로그램을 실행하는 건 아직 불가능해요.**
+loopy는 **타입 세이프한 TypeScript DSL이면서 실제로 동작하는 런타임**이에요. `next` dist-tag로 `@loopyjs/core`(그리고 관련 패키지들)라는 이름으로 npm에 배포돼 있어요. `tool`, `agent`, `workflow`, `team` 같은 모든 기본 단위는 완전히 타입 검증되는 동시에 *실제로 실행*돼요. `defineLoopy(...)`가 런타임을 만들고, `runtime.run(name, input)`이 이벤트 소싱 커널을 구동해서 실제로 모델을 호출하고, 툴을 실행하고, 리플레이 가능한 로그를 남겨요.
 
-대신 할 수 있는 게 있어요. 타입 검사가 실제로 동작하는 에이전트·툴·워크플로우 정의를 작성해 보고, TypeScript가 어떤 타입을 추론해 주는지 미리 확인할 수 있어요. 런타임보다 API의 모양을 먼저 확정하고 검증하는 게 loopy의 개발 순서예요. 컴파일 검증, 직접 확인한 `.d.ts` 출력, 그리고 반드시 실패해야 하는 테스트 케이스로 설계를 먼저 굳힌 다음에 런타임을 만들어요. 어디까지 완성됐는지는 [현황과 로드맵](/ko/status-roadmap/)에서 확인하세요.
+구체적으로 이런 걸 쓸 수 있어요: 추가 전용 이벤트 로그(`state = fold(reducer, log)`), 에이전트/워크플로우/팀 드라이버, 휴먼 인 더 루프 서스펜드 & 재개(`ctx.interrupt()` + `runtime.resume(...)`), 인메모리 스토어와 SQLite 스토어, 모델 클라이언트(내장 스텁과 `@loopyjs/anthropic`), 구조화 출력을 위한 Schema-Aligned Parsing, 기록→재생 테스트 하네스(`@loopyjs/test`), 로컬 DevTools UI(`loopy dev`).
 
-## 레포지토리 클론하기
+API는 아직 1.0 이전이라 `1.0.0` 릴리스 전에 바뀔 수 있어요. 정확히 무엇이 안정적이고 무엇이 아직 움직이는지는 [현황과 로드맵](/ko/status-roadmap/)에서 확인하세요.
 
-loopy는 아직 npm에 배포되지 않았어요. `npm install loopy`는 동작하지 않으니, 레포를 직접 클론하세요.
-
-```bash
-git clone https://github.com/kmjnnhyk/loopy.git
-cd loopy
-npm install    # 또는 bun install — 레포에 bun.lock이 있어요
-```
-
-## 타입 설계 확인하기
-
-테스트 러너는 따로 없어요. 이 프로젝트의 "테스트"는 TypeScript 컴파일 검사예요. 세 개의 `tsconfig`가 각각 다른 것을 증명해요.
+## 설치
 
 ```bash
-tsc -p tsconfig.json          # 메인테이너 게이트: src/만, isolatedDeclarations 켜짐
-tsc -p tsconfig.examples.json # 소비자 빌드: 추론된 .d.ts를 dist-examples/로 출력
-tsc -p tsconfig.negative.json # 반드시 실패해야 하는 케이스: 기대하는 에러를 고정
+bun add @loopyjs/core@next
 ```
 
-- **`tsconfig.json`** — [`isolatedDeclarations`](https://www.typescriptlang.org/tsconfig/#isolatedDeclarations)를 켠 채 `src/index.ts`만 컴파일해요. 내보내는 모든 팩토리에 명시적 반환 타입을 강제해서, 패키지 밖에서도 `.d.ts`의 타입 이름이 유지되고 에디터 호버가 깔끔하게 나오도록 지켜요.
-- **`tsconfig.examples.json`** — 실제 앱이 빌드하는 방식 그대로 `examples/*.ts`를 컴파일해요. 예제는 현실적인 규모예요: 툴 10개, 에이전트 5개, 워크플로우 2개, 의존성 7개짜리 레지스트리. 사용자가 실제로 받게 되는 추론 타입을 여기서 볼 수 있어요.
-- **`tsconfig.negative.json`** — 일부러 틀리게 만든 코드(`examples/_negative.ts`)를 컴파일해요. 엣지 이름 오타, 빠진 의존성 같은 실수가 각각 정확히 어떤 에러(`TS2820`, `TS2741`, ...)로 잡히는지 고정해 둬요. 실수가 `any`로 뭉개지지 않고 의미 있는 메시지로 잡힌다는 증거예요.
+필요한 만큼 패키지를 core 위에 얹으세요:
 
-코드를 읽기 시작한다면 [`examples/tools.ts`](https://github.com/kmjnnhyk/loopy/blob/master/examples/tools.ts), [`examples/agents.ts`](https://github.com/kmjnnhyk/loopy/blob/master/examples/agents.ts), [`examples/workflows.ts`](https://github.com/kmjnnhyk/loopy/blob/master/examples/workflows.ts)부터 보세요. 이 문서 사이트를 포함해 어떤 설명보다도 정확한, 살아 있는 사용 예제예요.
+```bash
+bun add @loopyjs/anthropic@next              # 실제 모델 호출 (Anthropic)
+bun add -d @loopyjs/cli@next @loopyjs/devtools@next @loopyjs/test@next   # loopy dev / loopy test
+```
+
+Bun이 주 런타임이에요. 패키지의 `bun` export 조건을 통해 TypeScript 소스를 직접 실행해요. Node도 빌드된 `dist` 출력을 통해 잘 동작하고, npm / pnpm도 패키지 매니저로 문제없이 써요.
+
+## 최소로 실행 가능한 예제
+
+이건 완전히 동작하는 loopy 프로그램이에요. `step()` 하나를 노드 하나짜리 `workflow()`로 감싸고, `defineLoopy`로 런타임에 연결한 다음 실행해요.
+
+```ts
+import { defineLoopy, workflow, step, node, io, lastChannel, END } from "@loopyjs/core";
+
+const greet = step({
+  name: "greet",
+  input: io<{ name: string }>(),
+  output: io<{ message: string }>(),
+  run: async (i) => ({ message: `Hello, ${i.name}!` }),
+});
+
+export const hello = workflow({
+  name: "hello",
+  state: { greeting: lastChannel<{ message: string } | null>(null) },
+  input: io<{ name: string }>(),
+  output: io<{ message: string }>(),
+})
+  .nodes({
+    greet: node(greet, { reads: (s) => ({ name: s.input.name }), writes: "greeting" }),
+  })
+  .flow((b) => b.start("greet").edge("greet", END))
+  .returns((s) => ({ message: s.greeting?.message ?? "" }));
+
+export const runtime = defineLoopy({
+  agents: {},
+  workflows: { hello },
+  deps: {},
+});
+
+const out = await runtime.run("hello", { name: "world" });
+console.log(out); // { message: "Hello, world!" }
+```
+
+여기선 모델을 하나도 호출하지 않아요. 첫 예제를 의존성 없이 깔끔하게 보여주려는 의도예요. 실제 의존성이 있는 툴은 [가이드: 툴 만들기](/ko/guides/tools/)를, 모델이 판단하는 에이전트는 [가이드: 툴을 쓰는 에이전트](/ko/guides/agent-with-tools/)를 참고하세요.
+
+## 실행 과정 지켜보기: `loopy dev`
+
+모듈에서 `runtime`을 내보내고 (위처럼) DevTools CLI로 그걸 가리키세요:
+
+```bash
+loopy dev ./loopy.config.ts --port 5173
+```
+
+`http://localhost:5173`에 로컬·오프라인·읽기 전용 웹 UI가 열려요. 스텝 타임라인, 실행 경로가 오버레이된 워크플로우 그래프, 각 스텝의 모델/툴 입출력을 보여주는 상세 패널로 구성돼요. 자세한 내용은 [DevTools (loopy dev)](/ko/guides/devtools/)를 확인하세요.
+
+## 모델을 두 번 호출하지 않고 테스트하기: `loopy test`
+
+`@loopyjs/test`는 한 번 실행한 결과를 골든 로그로 기록한 다음, 이후로는 LLM 호출 없이 그걸 리플레이해요. 모델에 비용을 내고 기다리는 대신, 오케스트레이션 회귀만 정확히 잡아내요:
+
+```bash
+loopy test        # 골든 로그와 대조하며 리플레이
+loopy test -u     # 의도한 변경 후 다시 기록
+```
 
 ## 다음 단계
 
 - API가 처음이라면 [핵심 개념 → Step 구조](/ko/core-concepts/step/)부터 시작하세요. 모든 것이 `Step` 하나로 통해요.
 - 손으로 익히는 쪽이 좋다면 [가이드](/ko/guides/tools/)에서 툴 → 에이전트 → 워크플로우 → 팀 순서로 따라와 보세요.
-- "타입 설계만 있다"는 게 어떤 상태인지 궁금하다면 [현황과 로드맵](/ko/status-roadmap/)에 경계가 정확히 그어져 있어요.
+- 무엇이 이미 나왔고 무엇이 아직 움직이는지 궁금하다면 [현황과 로드맵](/ko/status-roadmap/)에 경계가 정확히 그어져 있어요.

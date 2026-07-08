@@ -5,10 +5,6 @@ description: Pause a run for a human decision with ctx.interrupt, and understand
 
 Human-in-the-loop in loopy is one primitive — `ctx.interrupt<T>(payload)` — used from either a workflow `step()` or, inside a [`team()`](/reference/team/), a `tool()`. See [Event sourcing & replay](/core-concepts/event-sourcing/) for why this is designed around suspending a graph *position* rather than a paused function.
 
-:::caution
-`interrupt`'s type signature exists today; the suspend/resume runtime behind it does not. This guide describes the intended usage shape.
-:::
-
 ## Inside a workflow: `NodeCtx.interrupt`
 
 A workflow `step()`'s run context extends the plain tool context with `interrupt`:

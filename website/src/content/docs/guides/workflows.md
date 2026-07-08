@@ -10,7 +10,7 @@ This guide builds `designFlow`, from `examples/workflows.ts` — a workflow that
 State is a record of [channels](/core-concepts/channels-and-state/), one per thing the workflow's router needs to see:
 
 ```ts
-import { workflow, lastChannel, io, END } from "loopy";
+import { workflow, lastChannel, io, END } from "@loopyjs/core";
 
 const state = {
   figma: lastChannel<FigmaData | null>(null),
@@ -59,7 +59,7 @@ Try a typo — `.branch("build", (s) => (s.build?.ok ? "verfy" : "codeGen"))` �
 Not every node needs to be a tool or an agent. `build` and `push` here are inline `step()`s — plain functions with declared deps, same shape as a tool but defined right where they're used:
 
 ```ts
-import { step } from "loopy";
+import { step } from "@loopyjs/core";
 
 const build = step({
   name: "build",

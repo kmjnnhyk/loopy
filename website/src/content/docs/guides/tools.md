@@ -17,7 +17,7 @@ export interface GitRepo {
   find(query: string): Promise<readonly string[]>;
 }
 
-declare module "loopy" {
+declare module "@loopyjs/core" {
   interface LoopyDeps {
     repo: GitRepo;
   }
@@ -28,10 +28,10 @@ This is a one-time step per dependency — see [Dependency injection](/core-conc
 
 ## 2. Shape the input and output
 
-A tool's `input`/`output` are [`IO<...>`](/core-concepts/schemas/) schemas. For the prototype, `io<T>()` gives you a static type with an identity validator:
+A tool's `input`/`output` are [`IO<...>`](/core-concepts/schemas/) schemas. The built-in `io<T>()` gives you a static type with an identity validator — swap in Zod, Valibot, or ArkType for real runtime coercion:
 
 ```ts
-import { io } from "loopy";
+import { io } from "@loopyjs/core";
 
 const input = io<{ path: string; find: string; replace: string }>();
 const output = io<{ applied: boolean }>();
@@ -40,7 +40,7 @@ const output = io<{ applied: boolean }>();
 ## 3. Write the tool
 
 ```ts
-import { tool, io } from "loopy";
+import { tool, io } from "@loopyjs/core";
 
 export const editFile = tool({
   name: "editFile",

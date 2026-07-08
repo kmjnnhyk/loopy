@@ -44,7 +44,7 @@ export function tool<
 ## 예제
 
 ```ts
-import { tool, io } from "loopy";
+import { tool, io } from "@loopyjs/core";
 import type { GitRepo } from "./deps";
 
 export const editFile = tool({

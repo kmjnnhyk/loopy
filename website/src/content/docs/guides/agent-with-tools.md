@@ -12,7 +12,7 @@ Assume `editFile`, `createFile`, and `readFile` already exist (see [Guide: writi
 ## 2. Define a plain agent first
 
 ```ts
-import { agent, io } from "loopy";
+import { agent, io } from "@loopyjs/core";
 
 export const fileAnalyzer = agent({
   name: "fileAnalyzer",
@@ -46,7 +46,7 @@ export const codeGen = agent({
 ## 4. Check what got inferred
 
 ```ts
-import type { ToolDepKeys } from "loopy";
+import type { ToolDepKeys } from "@loopyjs/core";
 
 type CodeGenToolDeps = ToolDepKeys<typeof codeGen.tools>;
 // = "repo" — accumulated from editFile, createFile, readFile, AND fileAnalyzer,

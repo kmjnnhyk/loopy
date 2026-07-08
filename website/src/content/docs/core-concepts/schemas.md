@@ -25,9 +25,9 @@ export type InferOut<S extends IO<any, any>> = NonNullable<S["~standard"]["types
 
 The static `In`/`Out` types live in a **phantom property** (`~standard.types`). It's never actually populated at runtime — it exists purely so `InferIn<S>` / `InferOut<S>` can pull the type back out with an indexed access. Every place in loopy that needs "the actual TypeScript type this schema describes" — a tool's `run` parameter, a workflow node's return type — goes through `InferOut<...>`, never the schema object itself.
 
-## `io<Out, In>()` — the current placeholder constructor
+## `io<Out, In>()` — the built-in minimal constructor
 
-The prototype ships a minimal constructor so the type surface is fully exercised without pulling in a real validator dependency:
+loopy ships a minimal constructor so you can use the type surface fully without pulling in a real validator dependency:
 
 ```ts
 export function io<Out, In = Out>(vendor: string = "loopy"): IO<In, Out> {
@@ -41,12 +41,14 @@ export function io<Out, In = Out>(vendor: string = "loopy"): IO<In, Out> {
 }
 ```
 
-`io<{ path: string; patch: string }>()` gives you a schema whose static output type is `{ path: string; patch: string }`. At runtime, `validate` is currently an identity cast, not real validation — consistent with the rest of the repository being a type-only skeleton (see [Status & Roadmap](/status-roadmap/)). When the runtime lands, this is the seam where real coercion of LLM output into a schema (with typed parse errors instead of silent fail-open) plugs in, without changing `InferOut<S>` or anything downstream of it.
+`io<{ path: string; patch: string }>()` gives you a schema whose static output type is `{ path: string; patch: string }`. At runtime, `io()`'s own `validate` is an identity cast, not real validation — that's the seam where a real validator (Zod, Valibot, ArkType) plugs in for real coercion of LLM output, with typed parse errors instead of silent fail-open, without changing `InferOut<S>` or anything downstream of it.
+
+This is a different concern from **Schema-Aligned Parsing (SAP)**, which the agent driver already runs on every structured-output turn: it robustly extracts a JSON block from a model's raw text — stripping code fences, skipping stray prose, backtracking over unbalanced brackets — *before* handing the result to your schema's `validate`. SAP fixes "the model wrapped its JSON in markdown"; a real schema's `validate` fixes "the JSON doesn't actually match the shape I promised."
 
 ## Using it
 
 ```ts
-import { io } from "loopy";
+import { io } from "@loopyjs/core";
 
 const input = io<{ path: string; find: string; replace: string }>();
 const output = io<{ applied: boolean }>();

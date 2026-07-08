@@ -8,7 +8,7 @@ This guide builds `prTriage`. An issue comes in, a triage agent decides whether 
 ## 1. Shape the domain types and state
 
 ```ts
-import { agent, tool, io, inputChannel, lastChannel, team, END, defineLoopy } from "loopy";
+import { agent, tool, io, inputChannel, lastChannel, team, END, defineLoopy } from "@loopyjs/core";
 
 export interface Issue { readonly id: number; readonly body: string }
 

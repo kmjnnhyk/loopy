@@ -1,9 +1,6 @@
 ---
 title: Introduction
 description: loopy is a type-safe TypeScript DSL for LLM agents, tools, workflows, and multi-agent teams — React for agents.
-banner:
-  content: |
-    loopy is a prototype — the type surface is complete and compile-checked, the runtime is not yet implemented. See <a href="/status-roadmap/">Status &amp; Roadmap</a>.
 ---
 
 loopy is a type-safe TypeScript DSL for building LLM applications — **"React for agents."** Tools, agents, deterministic workflows, and multi-agent teams are all one primitive, a `Step`, so the whole spectrum from "you decide every step" to "the model decides" lives in a single, compile-checked model.
@@ -22,7 +19,7 @@ loopy turns each of these into a compile-time contract. Tools are referenced by 
 ## loopy at a glance
 
 ```ts
-import { agent, tool, io, team, inputChannel, lastChannel, END, defineLoopy } from "loopy";
+import { agent, tool, io, team, inputChannel, lastChannel, END, defineLoopy } from "@loopyjs/core";
 
 // A tool declares only the dependency slice it needs.
 const editFile = tool({
@@ -86,6 +83,6 @@ const out: ReviewResult | null = await rt.run("prTriage", { issue });
 
 ## Next steps
 
-- [Quick Start](/getting-started/) — clone the repo and explore the type surface with `tsc`.
+- [Quick Start](/getting-started/) — install `@loopyjs/core` and run your first program.
 - [The Step spine](/core-concepts/step/) — the one shape every primitive reduces to.
 - [Status & Roadmap](/status-roadmap/) — exactly what's done and what's next.

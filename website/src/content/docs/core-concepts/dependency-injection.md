@@ -21,7 +21,7 @@ export interface GitRepo {
 }
 // ...
 
-declare module "loopy" {
+declare module "@loopyjs/core" {
   interface LoopyDeps {
     repo: GitRepo;
     figma: FigmaApi;
