@@ -40,7 +40,17 @@ async function main(): Promise<void> {
     const { startDevServer } = await import("@loopyjs/devtools");
     const mod = (await import(Bun.resolveSync(modPath, process.cwd()))) as Record<string, unknown>;
     const runtime = resolveRuntime(mod);
-    const staticDir = new URL("../browser/dist", import.meta.resolve("@loopyjs/devtools")).pathname;
+    const devtoolsPkgUrl = new URL("..", import.meta.resolve("@loopyjs/devtools")); // .../packages/devtools/src/index.ts -> .../packages/devtools/
+    const packageDir = devtoolsPkgUrl.pathname;
+    const staticDir = new URL("browser/dist", devtoolsPkgUrl).pathname;
+    if (!(await Bun.file(`${staticDir}/index.html`).exists())) {
+      console.log("loopy dev: building browser bundle…");
+      const build = Bun.spawnSync(["bun", "run", "build"], { cwd: packageDir, stdout: "inherit", stderr: "inherit" });
+      if (build.exitCode !== 0 || !(await Bun.file(`${staticDir}/index.html`).exists())) {
+        console.error("loopy dev: browser bundle build failed — run `bun run build` in @loopyjs/devtools");
+        process.exit(1);
+      }
+    }
     const srv = startDevServer({ runtime: runtime as never, port, staticDir });
     console.log(`loopy dev → http://localhost:${srv.port}`);
     return;

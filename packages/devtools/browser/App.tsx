@@ -21,7 +21,7 @@ export function App({ client }: { client: DevClient }) {
           onChange={(e) => setScrub(Number(e.target.value) === maxSeq ? undefined : Number(e.target.value))} />
         <Timeline vm={vm} selected={selected} onSelect={setSelected} />
       </div>
-      <GraphPane vm={vm} client={client} selected={selected} onSelect={setSelected} />
+      <GraphPane vm={vm} client={client} selected={selected} onSelect={setSelected} scrub={scrub} />
       <Detail detail={selected ? vm.details[selected] ?? null : null} />
     </>
   );

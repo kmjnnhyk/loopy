@@ -12,15 +12,16 @@ const stateColor = (s: string) =>
   s === "visited" ? "var(--color-success)" :
   s === "errored" ? "var(--color-error)" : "var(--color-background-surface)";
 
-export function GraphPane({ vm, client, selected, onSelect }:
-  { vm: ViewModel; client: DevClient; selected: string | null; onSelect: (n: string) => void }) {
+export function GraphPane({ vm, client, selected, onSelect, scrub }:
+  { vm: ViewModel; client: DevClient; selected: string | null; onSelect: (n: string) => void; scrub?: number }) {
   const [topo, setTopo] = useState<DevTopology | null>(null);
   useEffect(() => {
     if (!vm.entry) return;
     fetch(`/api/topology/${encodeURIComponent(vm.entry)}`).then((r) => r.json()).then(setTopo).catch(() => setTopo(null));
   }, [vm.entry]);
 
-  const model = buildGraphModel(topo, client.events());
+  const events = scrub === undefined ? client.events() : client.events().filter((e) => e.seq <= scrub);
+  const model = buildGraphModel(topo, events);
   const pos = layout(model);
   const selName = selected ? selected.split("/").pop()!.split("#")[0] : null;
 

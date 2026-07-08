@@ -30,6 +30,7 @@ export function startDevServer(opts: DevServerOpts): { port: number; stop(): voi
 
   const server = Bun.serve({
     port: opts.port ?? 5173,
+    hostname: "127.0.0.1",
     async fetch(req, srv) {
       const u = new URL(req.url);
       if (u.pathname === "/ws") {
@@ -44,7 +45,13 @@ export function startDevServer(opts: DevServerOpts): { port: number; stop(): voi
         return json(sink.threadLog(tid, from));
       }
       if (u.pathname === "/api/run" && req.method === "POST") {
-        const { name, input } = (await req.json()) as { name: string; input: unknown };
+        let body: { name: string; input: unknown };
+        try {
+          body = (await req.json()) as { name: string; input: unknown };
+        } catch {
+          return json({ error: "invalid JSON body" }, 400);
+        }
+        const { name, input } = body;
         // Validate the entry BEFORE firing: core's exec() calls driverFor(name) which throws
         // synchronously ("unknown entry") before any RunStarted is written — with the
         // fire-and-forget .catch() below that rejection would be swallowed, leaving the UI a
@@ -63,7 +70,9 @@ export function startDevServer(opts: DevServerOpts): { port: number; stop(): voi
         const rel = u.pathname === "/" ? "/index.html" : u.pathname;
         const file = Bun.file(opts.staticDir + rel);
         if (await file.exists()) return new Response(file);
-        return new Response(Bun.file(opts.staticDir + "/index.html")); // SPA fallback
+        const index = Bun.file(opts.staticDir + "/index.html"); // SPA fallback
+        if (await index.exists()) return new Response(index);
+        return new Response("loopy dev: browser bundle not found — run `bun run build` in @loopyjs/devtools", { status: 404 });
       }
       return new Response("not found", { status: 404 });
     },
