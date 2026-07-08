@@ -12,8 +12,8 @@
   },
   "files": ["dist", "src", "browser/dist"],
   "scripts": {
-    "build": "vite build",
-    "prepublishOnly": "vite build",
+    "build": "bunx vite build",
+    "prepublishOnly": "bunx vite build",
     "test:e2e": "playwright test"
   },
   "peerDependencies": { "@loopyjs/core": "workspace:^" },
