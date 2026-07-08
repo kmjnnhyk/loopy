@@ -50,6 +50,16 @@ test("POST /api/run triggers an in-proc run; events are then queryable per threa
   expect(log[log.length - 1].type).toBe("RunEnded");
 });
 
+test("POST /api/run with an unknown name returns 400 and creates no phantom thread", async () => {
+  const res = await fetch(url("/api/run"), {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name: "designFlo", input: { message: "x" } }),
+  });
+  expect(res.status).toBe(400);
+  const body = await res.json();
+  expect(typeof body.error).toBe("string");
+});
+
 test("WS streams live events as a run executes", async () => {
   const ws = new WebSocket(url("/ws").replace("http", "ws"));
   const got: string[] = [];
