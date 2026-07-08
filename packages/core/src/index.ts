@@ -524,11 +524,30 @@ export interface TestHandle {
   replay(name: string, input: unknown, goldenEvents: readonly RuntimeEvent[]): Promise<ReplayResult>;
 }
 
+export interface DevTopology {
+  entry: string;
+  kind: "agent" | "workflow" | "team";
+  start: string | null;
+  nodes: readonly { name: string; kind: string }[];
+  edges: readonly { from: string; to: string }[];
+  branchSources: readonly string[];
+}
+
+/** Internal dev-observation capability (consumed by `loopy/devtools`). Present on
+ *  defineLoopy runtimes; absent on the loopy() builder (mirrors `~test`). */
+export interface DevHandle {
+  subscribe(listener: (e: RuntimeEvent) => void): () => void;
+  topology(entry: string): DevTopology | null;
+  entries(): readonly { name: string; kind: "agent" | "workflow" | "team" }[];
+}
+
 export interface Runtime<Reg> {
   readonly run: RunFn<Reg>;
   resume(threadIdValue: string, value: unknown): Promise<unknown>;
   /** internal — used by loopy/test; not part of the public authoring surface. */
   readonly "~test"?: TestHandle;
+  /** internal — used by loopy/devtools; not part of the public authoring surface. */
+  readonly "~dev"?: DevHandle;
 }
 
 interface RegEntry {
@@ -597,13 +616,53 @@ export function defineLoopy<
     },
   };
 
+  const devListeners = new Set<(e: RuntimeEvent) => void>();
+  const emit = (e: RuntimeEvent): void => {
+    def.onEvent?.(e);
+    for (const l of devListeners) l(e);
+  };
+
+  const devHandle: DevHandle = {
+    subscribe(listener) {
+      devListeners.add(listener);
+      return () => {
+        devListeners.delete(listener);
+      };
+    },
+    entries() {
+      return [...registry.entries()].map(([name, e]) => ({ name, kind: e.kind }));
+    },
+    topology(entry) {
+      const e = registry.get(entry);
+      if (!e || e.kind === "agent") return null;
+      const g = (e.value as { "~graph"?: {
+        nodes: Record<string, { step: unknown }>;
+        start: string;
+        edges: Record<string, string>;
+        branches: Record<string, unknown>;
+      } })["~graph"];
+      if (!g) return null;
+      return {
+        entry,
+        kind: e.kind,
+        start: g.start || null,
+        nodes: Object.entries(g.nodes).map(([name, n]) => ({
+          name,
+          kind: (n.step as { "~kind"?: string })["~kind"] ?? "step",
+        })),
+        edges: Object.entries(g.edges).map(([from, to]) => ({ from, to })),
+        branchSources: Object.keys(g.branches),
+      };
+    },
+  };
+
   const exec = async (name: string, input: unknown, opts?: RunOpts, resume?: { value: unknown }): Promise<unknown> => {
     const { driver, kind } = driverFor(name);
     // restart-safe auto id; determinism only binds inside ctx — defineLoopy's body sits
     // outside the recorded-effect boundary, so Math.random here is fine.
     const out = await _runThread({
       driver, store, threadId: opts?.threadId ?? `${name}#${counter++}-${Math.random().toString(36).slice(2, 8)}`, entry: name,
-      deps: def.deps as Record<string, unknown>, models: def.models ?? {}, onEvent: def.onEvent,
+      deps: def.deps as Record<string, unknown>, models: def.models ?? {}, onEvent: emit,
       input, resume,
     });
     return unwrapEntryOutput(kind, out);
@@ -618,6 +677,7 @@ export function defineLoopy<
       return exec(first.entry, undefined, { threadId: threadIdValue }, { value });
     },
     "~test": testHandle,
+    "~dev": devHandle,
   };
 }
 
