@@ -9,6 +9,6 @@
   "publishConfig": { "access": "public" },
   "exports": { ".": { "bun": "./src/index.ts", "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
   "files": ["dist", "src"],
-  "peerDependencies": { "@loopyjs/core": "workspace:*" },
+  "peerDependencies": { "@loopyjs/core": "workspace:^" },
   "dependencies": { "@anthropic-ai/sdk": "^0.110.0" }
 }
