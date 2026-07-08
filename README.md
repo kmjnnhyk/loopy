@@ -13,13 +13,15 @@ Everything reduces to one primitive: a `Step<Name, In, Out, Deps>`.
 ---
 
 > [!IMPORTANT]
-> **loopy is early and pre-1.0.** Both the type surface (`tool` / `agent` /
-> `workflow` / `team`, the registry, end-to-end inference) and the **runtime** —
-> an event-sourced kernel with one path for fresh / replay / resume, workflow /
-> agent / team drivers, human-in-the-loop suspend & resume, an Anthropic adapter,
-> and record→replay testing (`loopy/test`) — are implemented and exercised by the
-> test suite. The public API may still shift and the docs site is a work in
-> progress. See [Status & roadmap](#status--roadmap).
+> **loopy is early and pre-1.0, but shipped and published to npm.** Both the type
+> surface (`tool` / `agent` / `workflow` / `team`, the registry, end-to-end
+> inference) and the **runtime** — an event-sourced kernel with one path for
+> fresh / replay / resume, workflow / agent / team drivers, human-in-the-loop
+> suspend & resume, an Anthropic adapter, and record→replay testing
+> (`@loopyjs/test`) — are implemented and exercised by the test suite. All
+> packages are published at `0.1.0` under the `next` dist-tag (see
+> [Install](#install)). The public API may still shift before `1.0.0`.
+> See [Status & roadmap](#status--roadmap).
 
 ## Why loopy
 
@@ -46,10 +48,25 @@ an agent, a workflow node, a whole team — is a `Step`, so they compose for fre
 - **Vendor-neutral schemas.** A [Standard Schema](https://standardschema.dev/)-shaped
   carrier means your Zod / Valibot / ArkType types flow through unchanged.
 
+## Install
+
+```sh
+bun add @loopyjs/core@next
+```
+
+```sh
+bun add @loopyjs/anthropic@next                                       # real model calls
+bun add -d @loopyjs/cli@next @loopyjs/devtools@next @loopyjs/test@next # loopy dev / loopy test
+```
+
+Bun is the primary runtime (it runs the TypeScript source directly via the
+package's `bun` export condition); Node works via the built `dist`. npm / pnpm
+also work as package managers.
+
 ## A glance
 
 ```ts
-import { agent, tool, io, team, inputChannel, lastChannel, END, defineLoopy } from "loopy";
+import { agent, tool, io, team, inputChannel, lastChannel, END, defineLoopy } from "@loopyjs/core";
 
 // A tool declares only the dependency slice it needs.
 const editFile = tool({
@@ -133,7 +150,7 @@ proven before the runtime, so the runtime had a fixed target to hit.
 - ✅ **Runtime** — an event-sourced kernel (one path for fresh / replay / resume),
   workflow / agent / team drivers, `passTo` consumption, human-in-the-loop suspend
   & resume, and an Anthropic model adapter. Exercised end-to-end by the test suite.
-- ✅ **Record→replay testing** (`loopy/test`) — record a run once as a golden log,
+- ✅ **Record→replay testing** (`@loopyjs/test`) — record a run once as a golden log,
   then re-run only your orchestration code against the memoized effects (0 LLM
   calls), reporting the first divergence (see Testing, below).
 - 🔭 **Later** — parallel/concurrent agents, nested teams, typed error channels.
@@ -144,11 +161,11 @@ A full documentation site is in progress. In the meantime, the annotated
 [`examples/`](./examples) are the most accurate usage reference — they compile
 against the type surface.
 
-## Testing — record→replay (`loopy/test`)
+## Testing — record→replay (`@loopyjs/test`)
 
 ```ts
 import { expect } from "bun:test";
-import { defineLoopyTest } from "loopy/test";
+import { defineLoopyTest } from "@loopyjs/test";
 import { runtime } from "./loopy.config";
 
 const { test } = defineLoopyTest(runtime, { dir: import.meta.dir });
@@ -187,4 +204,4 @@ tsc -p tsconfig.negative.json # must-error fixtures: captures the expected diagn
 
 ## License
 
-Not yet licensed — all rights reserved while in the design phase.
+Not yet licensed — all rights reserved.

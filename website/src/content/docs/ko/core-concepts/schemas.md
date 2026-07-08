@@ -25,9 +25,9 @@ export type InferOut<S extends IO<any, any>> = NonNullable<S["~standard"]["types
 
 정적 `In`/`Out` 타입은 **팬텀 프로퍼티**(`~standard.types`)에 들어 있어요. 런타임에는 실제로 채워지지 않고, `InferIn<S>` / `InferOut<S>`가 인덱스 접근으로 타입을 다시 꺼낼 수 있도록 존재할 뿐이에요. loopy 안에서 "이 스키마가 나타내는 실제 TypeScript 타입"이 필요한 곳(툴의 `run` 매개변수, 워크플로우 노드의 반환 타입 등)은 스키마 객체 자체가 아니라 항상 `InferOut<...>`을 거쳐요.
 
-## 임시 생성자, `io<Out, In>()`
+## `io<Out, In>()` — 내장 최소 생성자
 
-프로토타입은 실제 검증기 의존성을 끌어들이지 않고도 타입 표면을 온전히 검증할 수 있도록 최소한의 생성자를 제공해요:
+loopy는 실제 검증기 의존성을 끌어들이지 않고도 타입 표면을 온전히 쓸 수 있도록 최소한의 생성자를 함께 제공해요:
 
 ```ts
 export function io<Out, In = Out>(vendor: string = "loopy"): IO<In, Out> {
@@ -41,12 +41,14 @@ export function io<Out, In = Out>(vendor: string = "loopy"): IO<In, Out> {
 }
 ```
 
-`io<{ path: string; patch: string }>()`는 정적 출력 타입이 `{ path: string; patch: string }`인 스키마를 만들어줘요. 런타임에서 `validate`는 지금은 그냥 항등 캐스트일 뿐, 실제 검증은 하지 않아요. 레포지토리 나머지 부분이 타입 전용 스켈레톤인 것과 같은 맥락이에요(자세히는 [현황과 로드맵](/ko/status-roadmap/) 참고). 런타임이 들어오면 이 지점이 LLM 출력을 스키마로 실제 변환하는 이음매가 돼요. 조용히 실패를 흘려보내는 대신 타입이 지정된 파싱 에러를 내도록요. `InferOut<S>`나 그 이후 단계는 전혀 바뀌지 않아요.
+`io<{ path: string; patch: string }>()`는 정적 출력 타입이 `{ path: string; patch: string }`인 스키마를 만들어줘요. 런타임에서 `io()`의 `validate`는 항등 캐스트일 뿐, 실제 검증은 하지 않아요. 이 지점이 실제 검증기(Zod, Valibot, ArkType)가 끼어들어 LLM 출력을 진짜로 강제 변환하는 이음매예요. 조용히 실패를 흘려보내는 대신 타입이 지정된 파싱 에러를 내도록요. `InferOut<S>`나 그 이후 단계는 전혀 바뀌지 않아요.
+
+이건 에이전트 드라이버가 구조화 출력을 다루는 모든 턴마다 이미 실행하는 **Schema-Aligned Parsing(SAP)**과는 다른 문제예요. SAP는 모델의 원본 텍스트에서 JSON 블록을 강건하게 추출해요. 코드 펜스를 벗기고, 잡다한 서술을 건너뛰고, 짝이 안 맞는 괄호를 되짚어가면서요. 이건 스키마의 `validate`로 넘기기 *전에* 일어나요. SAP는 "모델이 JSON을 마크다운으로 감쌌다"를 고치고, 실제 스키마의 `validate`는 "JSON이 내가 약속한 모양과 실제로 다르다"를 고쳐요.
 
 ## 사용하기
 
 ```ts
-import { io } from "loopy";
+import { io } from "@loopyjs/core";
 
 const input = io<{ path: string; find: string; replace: string }>();
 const output = io<{ applied: boolean }>();

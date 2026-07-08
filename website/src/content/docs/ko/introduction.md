@@ -1,9 +1,6 @@
 ---
 title: 소개
 description: loopy는 LLM 에이전트, 툴, 워크플로우, 멀티 에이전트 팀을 위한 타입 세이프 TypeScript DSL이에요.
-banner:
-  content: |
-    loopy는 아직 프로토타입이에요. 타입 설계는 완성되어 컴파일로 검증을 마쳤지만, 런타임은 구현 전이에요. <a href="/ko/status-roadmap/">현황과 로드맵</a>에서 자세히 확인할 수 있어요.
 ---
 
 loopy는 LLM 애플리케이션을 만들기 위한 타입 세이프 TypeScript DSL이에요. React가 UI를 컴포넌트 하나로 정리했듯, loopy는 툴, 에이전트, 워크플로우, 멀티 에이전트 팀을 `Step` 하나로 정리해요. 그래서 "React for agents"예요. 모든 단계를 코드가 결정하는 워크플로우부터 모델이 스스로 판단하는 에이전트까지, 전부 하나의 컴파일 검증 모델 안에서 다룰 수 있어요.
@@ -22,7 +19,7 @@ loopy는 이 문제들을 전부 컴파일 타임 계약으로 바꿔요. 툴은
 ## 한눈에 보기
 
 ```ts
-import { agent, tool, io, team, inputChannel, lastChannel, END, defineLoopy } from "loopy";
+import { agent, tool, io, team, inputChannel, lastChannel, END, defineLoopy } from "@loopyjs/core";
 
 // 툴은 자기한테 필요한 의존성만 선언해요.
 const editFile = tool({
@@ -86,6 +83,6 @@ const out: ReviewResult | null = await rt.run("prTriage", { issue });
 
 ## 다음 단계
 
-- [빠른 시작](/ko/getting-started/) — 레포를 클론하고 `tsc`로 타입 설계를 직접 확인해 보세요.
+- [빠른 시작](/ko/getting-started/) — `@loopyjs/core`를 설치하고 첫 프로그램을 실행해 보세요.
 - [Step 구조](/ko/core-concepts/step/) — 모든 것의 기본 단위인 `Step`을 알아보세요.
 - [현황과 로드맵](/ko/status-roadmap/) — 무엇이 완성됐고 무엇이 남았는지 정리되어 있어요.

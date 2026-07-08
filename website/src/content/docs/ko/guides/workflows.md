@@ -10,7 +10,7 @@ description: 상태 채널과 라우터로, 재시도 사이클과 분기가 있
 상태는 [채널](/ko/core-concepts/channels-and-state/)의 레코드예요. 워크플로우의 라우터가 봐야 하는 것마다 채널이 하나씩 있어요:
 
 ```ts
-import { workflow, lastChannel, io, END } from "loopy";
+import { workflow, lastChannel, io, END } from "@loopyjs/core";
 
 const state = {
   figma: lastChannel<FigmaData | null>(null),
@@ -59,7 +59,7 @@ const designFlow = flow.flow((b) =>
 모든 노드가 툴이나 에이전트일 필요는 없어요. 여기서 `build`와 `push`는 인라인 `step()`이에요. 의존성이 선언된 평범한 함수라서 툴과 형태는 같지만, 쓰이는 자리에 바로 정의한다는 점이 달라요:
 
 ```ts
-import { step } from "loopy";
+import { step } from "@loopyjs/core";
 
 const build = step({
   name: "build",

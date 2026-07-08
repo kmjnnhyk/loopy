@@ -82,6 +82,11 @@ export default defineConfig({
 							translations: { ko: '휴먼 인 더 루프' },
 							slug: 'guides/human-in-the-loop',
 						},
+						{
+							label: 'DevTools (loopy dev)',
+							translations: { ko: 'DevTools (loopy dev)' },
+							slug: 'guides/devtools',
+						},
 					],
 				},
 				{

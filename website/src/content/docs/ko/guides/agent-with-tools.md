@@ -12,7 +12,7 @@ description: 툴을 호출하는 에이전트를 만들어요. 서브 에이전�
 ## 2. 먼저 평범한 에이전트 정의하기
 
 ```ts
-import { agent, io } from "loopy";
+import { agent, io } from "@loopyjs/core";
 
 export const fileAnalyzer = agent({
   name: "fileAnalyzer",
@@ -46,7 +46,7 @@ export const codeGen = agent({
 ## 4. 추론된 타입 확인하기
 
 ```ts
-import type { ToolDepKeys } from "loopy";
+import type { ToolDepKeys } from "@loopyjs/core";
 
 type CodeGenToolDeps = ToolDepKeys<typeof codeGen.tools>;
 // = "repo" — editFile, createFile, readFile, fileAnalyzer로부터 누적됐어요.
