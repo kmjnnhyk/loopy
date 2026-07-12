@@ -1,0 +1,7 @@
+# Code owners for loopy.
+# Every PR automatically requests review from the owner(s) below.
+# (Review is auto-requested, not enforced as a merge gate — see the branch ruleset.)
+#
+# Docs: https://docs.github.com/articles/about-code-owners
+
+*       @kmjnnhyk

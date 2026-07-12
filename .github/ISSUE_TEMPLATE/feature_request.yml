@@ -1,0 +1,56 @@
+name: 💡 Feature request / proposal
+description: Suggest a new capability, API, or change to loopy.
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        loopy is **pre-1.0 and type-surface first** — the compile-time contract is
+        the product, so API proposals are weighed against type inference, the
+        `Step` model, and the roadmap. Concrete use cases help a lot.
+
+        For open-ended questions or ideas you're unsure about, consider opening a
+        discussion first rather than a formal request.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What are you trying to do that loopy makes hard or impossible today?
+      placeholder: |
+        I want to run two agents concurrently and merge their outputs, but…
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should the API or behavior look like? A sketch of the types/usage is ideal.
+      render: typescript
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - "Type surface (tool / agent / workflow / team)"
+        - "Runtime / event-sourced kernel"
+        - "Model adapter (@loopyjs/anthropic)"
+        - "Testing (@loopyjs/test — record→replay)"
+        - "DevTools / CLI"
+        - "Docs / examples"
+        - "Other"
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered (optional)
+      description: Other approaches you weighed, or how you work around it today.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and discussions for this idea.
+          required: true

@@ -14,6 +14,7 @@ The API is still pre-1.0 and may shift before a `1.0.0` release — see [Status 
 ## Install
 
 ```bash
+bun init -y                    # bootstrap first, if it's a new project
 bun add @loopyjs/core@next
 ```
 
@@ -62,6 +63,13 @@ const out = await runtime.run("hello", { name: "world" });
 console.log(out); // { message: "Hello, world!" }
 ```
 
+Save this as `hello.ts` and run it:
+
+```bash
+bun run hello.ts
+# { message: "Hello, world!" }
+```
+
 Nothing here calls a model — that's deliberate, to keep this first example dependency-free. For a tool with real dependencies, see [Guide: writing a tool](/guides/tools/); for a model-driven agent, see [Guide: an agent with tools](/guides/agent-with-tools/).
 
 ## Watch it run: `loopy dev`
@@ -69,7 +77,7 @@ Nothing here calls a model — that's deliberate, to keep this first example dep
 Export your `runtime` from a module (as above) and point the DevTools CLI at it:
 
 ```bash
-loopy dev ./loopy.config.ts --port 5173
+loopy dev ./hello.ts --port 5173
 ```
 
 This opens a local, offline, read-only web UI at `http://localhost:5173` — a timeline of steps, a graph of the workflow with the executed path overlaid, and a detail pane for each step's model/tool I/O. See [DevTools (loopy dev)](/guides/devtools/).
