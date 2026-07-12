@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://loopy.js.org
+    about: Guides and API reference. Most usage questions are answered here.
+  - name: 💬 Questions & ideas (Discussions)
+    url: https://github.com/kmjnnhyk/loopy/discussions
+    about: Usage help, "how do I…", and open-ended ideas. Please ask here instead of opening an issue.
+  - name: 🔒 Report a security vulnerability
+    url: https://github.com/kmjnnhyk/loopy/security/advisories/new
+    about: Do NOT open a public issue for security problems. Report privately here.

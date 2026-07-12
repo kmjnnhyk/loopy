@@ -1,0 +1,96 @@
+name: 🐛 Bug report
+description: Something in loopy behaves incorrectly (a type error, runtime crash, or wrong output).
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! A **minimal reproduction** is by far the most
+        helpful thing you can provide — it's usually the difference between a fix
+        this week and a fix that never happens.
+
+        Before filing, please search [existing issues](https://github.com/kmjnnhyk/loopy/issues?q=is%3Aissue)
+        to avoid duplicates.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected instead.
+      placeholder: |
+        `defineLoopy` refuses to type `run` even though every dependency is provided…
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: >
+        The smallest self-contained snippet (or a link to a repo / StackBlitz)
+        that reproduces the problem. Type-level bugs: include the exact code that
+        should/shouldn't compile.
+      render: typescript
+      placeholder: |
+        import { tool, io, defineLoopy } from "@loopyjs/core";
+        // …
+    validations:
+      required: true
+  - type: dropdown
+    id: package
+    attributes:
+      label: Affected package
+      description: Which package does the bug live in? (pick the most specific one)
+      multiple: true
+      options:
+        - "@loopyjs/core"
+        - "@loopyjs/anthropic"
+        - "@loopyjs/test"
+        - "@loopyjs/cli"
+        - "@loopyjs/devtools"
+        - "Not sure"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: loopy version
+      description: The installed version (e.g. `0.1.0`). Run `bun pm ls | grep loopy` or check package.json.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Bug kind
+      options:
+        - "Compile-time / type error"
+        - "Runtime error or crash"
+        - "Wrong runtime output"
+        - "Replay / record divergence (@loopyjs/test)"
+        - "DevTools / CLI"
+        - "Docs"
+        - "Other"
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Runtime & TypeScript version
+      description: e.g. `Bun 1.2.15, TypeScript 6.0.0` or `Node 22.14`.
+      placeholder: "Bun 1.2.15, TypeScript 6.x"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error output (optional)
+      description: The full error message / stack trace / `tsc` diagnostic, if any.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this is not a duplicate.
+          required: true
+        - label: My reproduction is minimal and self-contained.
+          required: true

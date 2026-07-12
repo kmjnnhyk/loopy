@@ -202,6 +202,17 @@ tsc -p tsconfig.examples.json # consumer build: emits inferred .d.ts to dist-exa
 tsc -p tsconfig.negative.json # must-error fixtures: captures the expected diagnostics
 ```
 
+## Contributing
+
+Bug reports, feature proposals, and PRs are welcome. Start with
+[CONTRIBUTING.md](./CONTRIBUTING.md) — it covers the dev setup, the single
+`bun run check` gate, and how PRs are merged. Please also read the
+[Code of Conduct](./CODE_OF_CONDUCT.md). For usage questions and ideas, use
+[Discussions](https://github.com/kmjnnhyk/loopy/discussions).
+
+Found a security issue? Please report it privately — see
+[SECURITY.md](./SECURITY.md).
+
 ## License
 
-Not yet licensed — all rights reserved.
+[MIT](./LICENSE) © kmjnnhyk
