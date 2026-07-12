@@ -1,0 +1,20 @@
+{
+  "name": "__NAME__",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "loopy dev ./index.ts --port 5173"
+  },
+  "devDependencies": {
+    "@loopyjs/cli": "^__VERSION__",
+    "@loopyjs/devtools": "^__VERSION__",
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@loopyjs/core": "^__VERSION__"
+  }
+}
