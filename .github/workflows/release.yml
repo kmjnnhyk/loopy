@@ -1,9 +1,9 @@
-# Release — publishes all 5 @loopyjs packages to npm via OIDC Trusted Publishing
+# Release — publishes the 5 @loopyjs packages plus create-loopy to npm via OIDC Trusted Publishing
 # (no token, automatic provenance). Triggered by pushing a version tag (v0.1.1)
 # or manually (workflow_dispatch, choose the dist-tag).
 #
 # ONE-TIME SETUP (per package, on npmjs.com — see RELEASING.md): configure a
-# Trusted Publisher for @loopyjs/{core,anthropic,test,cli,devtools} pointing at
+# Trusted Publisher for @loopyjs/{core,anthropic,test,cli,devtools} and create-loopy pointing at
 # this repo + workflow `release.yml`. Until that exists, publishing 403s.
 #
 # Build/publish split: Bun builds (it resolves `workspace:` from the local
@@ -65,3 +65,6 @@ jobs:
             npm publish --workspace "@loopyjs/$pkg" --tag "$TAG" --ignore-scripts
             echo "::endgroup::"
           done
+          echo "::group::publish create-loopy (--tag $TAG)"
+          npm publish --workspace "create-loopy" --tag "$TAG" --ignore-scripts
+          echo "::endgroup::"

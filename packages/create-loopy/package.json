@@ -1,0 +1,12 @@
+{
+  "name": "create-loopy",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Scaffold a ready-to-run loopy project",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/kmjnnhyk/loopy.git", "directory": "packages/create-loopy" },
+  "homepage": "https://loopy.js.org",
+  "publishConfig": { "access": "public" },
+  "bin": { "create-loopy": "./dist/index.js" },
+  "files": ["dist", "template"]
+}

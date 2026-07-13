@@ -6,6 +6,7 @@
     { "path": "./packages/claude-code" },
     { "path": "./packages/test" },
     { "path": "./packages/cli" },
-    { "path": "./packages/devtools" }
+    { "path": "./packages/devtools" },
+    { "path": "./packages/create-loopy" }
   ]
 }
