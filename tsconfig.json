@@ -3,6 +3,7 @@
   "references": [
     { "path": "./packages/core" },
     { "path": "./packages/anthropic" },
+    { "path": "./packages/claude-code" },
     { "path": "./packages/test" },
     { "path": "./packages/cli" },
     { "path": "./packages/devtools" }

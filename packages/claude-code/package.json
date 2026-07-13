@@ -1,0 +1,13 @@
+{
+  "name": "@loopyjs/claude-code",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "loopy model adapter backed by the Claude Code CLI (headless `claude -p`, subscription auth)",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/kmjnnhyk/loopy.git", "directory": "packages/claude-code" },
+  "homepage": "https://loopy.js.org",
+  "publishConfig": { "access": "public" },
+  "exports": { ".": { "bun": "./src/index.ts", "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "files": ["dist", "src"],
+  "peerDependencies": { "@loopyjs/core": "workspace:^" }
+}
