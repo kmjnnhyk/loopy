@@ -13,6 +13,21 @@ The API is still pre-1.0 and may shift before a `1.0.0` release — see [Status 
 
 ## Install
 
+The fastest way to start is to scaffold a ready-to-run project:
+
+```bash
+bun create loopy@next my-app
+cd my-app
+bun install
+bun run dev            # opens the DevTools UI at http://localhost:5173
+```
+
+This generates a Bun project wired with `@loopyjs/core`, the `loopy` CLI, and DevTools, a `dev` script, and a runnable `index.ts` (the `hello` workflow below) — no extra setup, no API key.
+
+### Manual setup
+
+To add loopy to an existing project instead:
+
 ```bash
 bun init -y                    # bootstrap first, if it's a new project
 bun add @loopyjs/core@next
