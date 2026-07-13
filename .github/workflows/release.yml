@@ -65,3 +65,6 @@ jobs:
             npm publish --workspace "@loopyjs/$pkg" --tag "$TAG" --ignore-scripts
             echo "::endgroup::"
           done
+          echo "::group::publish create-loopy (--tag $TAG)"
+          npm publish --workspace "create-loopy" --tag "$TAG" --ignore-scripts
+          echo "::endgroup::"
