@@ -22,6 +22,10 @@ test("scaffold copies template, renames _gitignore, substitutes name + version",
   expect(pkg.devDependencies["@loopyjs/cli"]).toBe("^0.1.0");
   expect(pkg.devDependencies["@loopyjs/devtools"]).toBe("^0.1.0");
 
+  const readme = readFileSync(join(target, "README.md"), "utf8");
+  expect(readme).toContain("# my-app");
+  expect(readme).not.toContain("__NAME__");
+
   rmSync(dir, { recursive: true, force: true });
 });
 

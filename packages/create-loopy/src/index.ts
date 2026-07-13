@@ -25,6 +25,10 @@ export function scaffold(targetDir: string, version: string): void {
     .replaceAll("__NAME__", basename(dest))
     .replaceAll("__VERSION__", version);
   writeFileSync(pkgPath, substituted);
+
+  // Substitute the project name into the README heading too.
+  const readmePath = join(dest, "README.md");
+  writeFileSync(readmePath, readFileSync(readmePath, "utf8").replaceAll("__NAME__", basename(dest)));
 }
 
 function main(): void {
