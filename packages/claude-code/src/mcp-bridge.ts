@@ -42,10 +42,15 @@ async function loadSdk(): Promise<McpSdk> {
       ListToolsRequestSchema: types.ListToolsRequestSchema,
       CallToolRequestSchema: types.CallToolRequestSchema,
     };
-  } catch {
-    throw new Error(
-      'delegatedAgent requires the optional peer "@modelcontextprotocol/sdk" — install it with `bun add @modelcontextprotocol/sdk`. (Only delegated agents need it; the claudeCode() model client works without it.)',
-    );
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    const message = err instanceof Error ? err.message : String(err);
+    if (code === "ERR_MODULE_NOT_FOUND" || /Cannot find (module|package)/i.test(message)) {
+      throw new Error(
+        'delegatedAgent requires the optional peer "@modelcontextprotocol/sdk" — install it with `bun add @modelcontextprotocol/sdk`. (Only delegated agents need it; the claudeCode() model client works without it.)',
+      );
+    }
+    throw err;
   }
 }
 
