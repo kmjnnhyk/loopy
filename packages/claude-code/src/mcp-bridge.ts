@@ -109,10 +109,15 @@ export async function startToolBridge(
           res.writeHead(400).end();
           return;
         }
-        void transport.handleRequest(req, res, parsed);
+        void transport.handleRequest(req, res, parsed).catch(() => {
+          if (!res.headersSent) res.writeHead(500).end();
+        });
       });
     } else {
-      void transport.handleRequest(req, res); // GET(SSE)/DELETE — transport가 처리
+      // GET(SSE)/DELETE — transport가 처리
+      void transport.handleRequest(req, res).catch(() => {
+        if (!res.headersSent) res.writeHead(500).end();
+      });
     }
   });
   await new Promise<void>((resolve) => httpServer.listen(0, "127.0.0.1", resolve));

@@ -89,4 +89,6 @@ Code with an open (typeless) schema, so it may pass them with loose types
 (e.g. a number as the JSON string "3"). State each argument's type in the
 tool's description, and have type-sensitive tools coerce/validate their inputs.
 
+- The in-process tool bridge listens on 127.0.0.1 with no auth for the duration of a delegation — any local process could call your tools during that window. Keep delegated agents to trusted local/dev/internal environments (consistent with the subscription ToS).
+
 ⚠️ Subscription ToS: personal dev / dogfooding / internal tooling only.

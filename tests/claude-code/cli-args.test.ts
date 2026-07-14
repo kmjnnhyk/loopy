@@ -16,7 +16,7 @@ test("buildDelegateArgs: 필수 플래그 전부 포함", () => {
   expect(flag("--model")).toBe("sonnet");
   expect(flag("--system-prompt")).toBe("sys");
   expect(flag("--allowedTools")).toBe("mcp__loopy__readFile,mcp__loopy__writeFile");
-  expect(flag("--permission-mode")).toBe("bypassPermissions");
+  expect(flag("--permission-mode")).toBe("dontAsk");
   expect(args).toContain("--strict-mcp-config");
   // 빌트인 전부 차단
   const toolsIdx = args.indexOf("--tools");

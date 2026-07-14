@@ -32,7 +32,7 @@ export function buildDelegateArgs(req: DelegateRequest): string[] {
     "--strict-mcp-config",             // 우리 서버만 — 사용자 .mcp.json 무시
     "--tools", "",                     // 빌트인(Read/Bash/…) 전부 차단
     "--allowedTools", req.allowedTools.join(","),
-    "--permission-mode", "bypassPermissions", // 무인 실행 (빌트인은 이미 껐음)
+    "--permission-mode", "dontAsk", // unattended: auto-deny anything not in --allowedTools (defense-in-depth over --tools "")
     ...(req.maxTurns !== undefined ? ["--max-turns", String(req.maxTurns)] : []),
   ];
 }
