@@ -73,3 +73,6 @@ export type { ClaudeCodeOpts } from "./spawn.ts";
 
 export { buildDelegateArgs, claudeCliBackend } from "./cli-backend.ts";
 export type { DelegateBackend, DelegateRequest } from "./cli-backend.ts";
+
+export { startToolBridge } from "./mcp-bridge.ts";
+export type { ToolBridge } from "./mcp-bridge.ts";
