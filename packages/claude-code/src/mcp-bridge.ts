@@ -10,6 +10,8 @@
 import { createServer } from "node:http";
 import { randomUUID } from "node:crypto";
 import type { AnyStep } from "@loopyjs/core";
+// "./internal" is core's explicitly-unstable surface — see the core-1.0 NOTE in
+// delegated-agent.ts for the deferred stabilization decision.
 import { pickDeps, stableStringify } from "@loopyjs/core/internal";
 
 export interface ToolBridge {
@@ -58,8 +60,20 @@ export async function startToolBridge(
   tools: readonly AnyStep[],
   deps: Record<string, unknown>,
 ): Promise<ToolBridge> {
+  // delegatedAgent() blocks duplicate tool names at compile time via the
+  // NoDuplicateTools guard, but startToolBridge is a public entry callable
+  // directly — so re-check at runtime. A collision must fail loud, not let one
+  // tool silently shadow another (tools/list would still advertise both, making
+  // the shadowed one unreachable).
+  const byName = new Map<string, AnyStep>();
+  for (const t of tools) {
+    if (byName.has(t.name)) {
+      throw new Error(`startToolBridge: duplicate tool name "${t.name}" — each tool must have a unique name`);
+    }
+    byName.set(t.name, t);
+  }
+
   const sdk = await loadSdk();
-  const byName = new Map(tools.map((t) => [t.name, t]));
 
   const server = new sdk.Server({ name: "loopy", version: "0.1.0" }, { capabilities: { tools: {} } });
 
@@ -120,7 +134,23 @@ export async function startToolBridge(
       });
     }
   });
-  await new Promise<void>((resolve) => httpServer.listen(0, "127.0.0.1", resolve));
+  // listen(0) on loopback effectively never fails, but wire the error path
+  // anyway: without an 'error' listener a failed listen leaves this Promise
+  // unsettled forever (startToolBridge hangs) and the event goes uncaught.
+  await new Promise<void>((resolve, reject) => {
+    const onStartupError = (err: Error): void => reject(err);
+    httpServer.once("error", onStartupError);
+    httpServer.listen(0, "127.0.0.1", () => {
+      httpServer.removeListener("error", onStartupError);
+      // Past startup, a stray server 'error' event would be uncaught and crash
+      // the host process (the bridge is already returned — no Promise left to
+      // reject). Surface it on stderr instead so the failure stays visible.
+      httpServer.on("error", (err: Error) => {
+        console.error(`[loopy tool-bridge] server error: ${err.message}`);
+      });
+      resolve();
+    });
+  });
   const port = (httpServer.address() as { port: number }).port;
 
   return {

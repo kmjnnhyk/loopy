@@ -69,3 +69,17 @@ test("bridge: 미등록 툴 → isError", async () => {
     await bridge.close();
   }
 });
+
+test("bridge: 중복 tool 이름은 런타임에 throw (public entry 가드)", async () => {
+  const first = tool({
+    name: "dup", description: "first",
+    input: io<{ x: number }>(), output: io<{ ok: true }>(),
+    run: async () => ({ ok: true as const }),
+  });
+  const second = tool({
+    name: "dup", description: "second",
+    input: io<{ y: number }>(), output: io<{ ok: true }>(),
+    run: async () => ({ ok: true as const }),
+  });
+  await expect(startToolBridge([first, second], {})).rejects.toThrow('duplicate tool name "dup"');
+});
