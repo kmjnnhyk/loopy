@@ -1,6 +1,6 @@
 {
   "name": "@loopyjs/devtools",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "loopy dev — local read-only observability web UI (Bun)",
   "license": "MIT",
