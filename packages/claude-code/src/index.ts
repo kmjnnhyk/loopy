@@ -76,3 +76,6 @@ export type { DelegateBackend, DelegateRequest } from "./cli-backend.ts";
 
 export { startToolBridge } from "./mcp-bridge.ts";
 export type { ToolBridge } from "./mcp-bridge.ts";
+
+export { delegatedAgent } from "./delegated-agent.ts";
+export type { ClaudeDelegateOpts, DelegatedAgent } from "./delegated-agent.ts";
