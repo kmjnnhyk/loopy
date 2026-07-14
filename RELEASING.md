@@ -1,13 +1,14 @@
 # Releasing
 
-loopy publishes all 5 packages (`@loopyjs/{core,anthropic,test,cli,devtools}`)
-in lockstep from CI, using **npm Trusted Publishing** (OIDC — no long-lived
-token, automatic [provenance](https://docs.npmjs.com/generating-provenance-statements/)).
+loopy publishes all 6 `@loopyjs/*` packages
+(`@loopyjs/{core,anthropic,test,cli,devtools,claude-code}`) in lockstep from CI,
+plus the `create-loopy` scaffolder, using **npm Trusted Publishing** (OIDC — no
+long-lived token, automatic [provenance](https://docs.npmjs.com/generating-provenance-statements/)).
 
 ## One-time setup (maintainer, on npmjs.com)
 
 Trusted Publishing needs a per-package trust relationship between npm and this
-repo's `release.yml` workflow. Do this **once per package** (all 5):
+repo's `release.yml` workflow. Do this **once per package** (all 6):
 
 1. npmjs.com → the package (e.g. `@loopyjs/core`) → **Settings** → **Trusted Publisher**.
 2. Choose **GitHub Actions** and fill in:
@@ -15,21 +16,23 @@ repo's `release.yml` workflow. Do this **once per package** (all 5):
    - Repository: `loopy`
    - Workflow filename: `release.yml`
    - Environment: leave blank (the workflow uses none)
-3. Save. Repeat for `@loopyjs/anthropic`, `@loopyjs/test`, `@loopyjs/cli`, `@loopyjs/devtools`.
+3. Save. Repeat for `@loopyjs/anthropic`, `@loopyjs/test`, `@loopyjs/cli`, `@loopyjs/devtools`, `@loopyjs/claude-code`.
 
 Requirements the workflow already satisfies: `id-token: write` permission,
 Node ≥ 22.14 + npm ≥ 11.5.1, and each package.json carries `repository.url` +
 `repository.directory` (npm matches the trusted publisher against these).
 
 Until a package's trusted publisher is configured, its `npm publish` step 403s.
-The manual `bun publish` + granular-token path used for the first 0.1.0 release
-still works as a fallback (see the monorepo memory / git history).
+Both the 0.1.0 and 0.2.0 releases were in fact shipped via the manual fallback: a
+granular npm token + `node scripts/prepare-publish.mjs` + `npm publish --workspace
+@loopyjs/<pkg> --ignore-scripts` (this is how `@loopyjs/claude-code` shipped both
+releases, before it was added to the OIDC publish loop).
 
 ## Cutting a release
 
-Versions are **lockstep** — all 5 packages share one version.
+Versions are **lockstep** — all 6 packages share one version.
 
-1. Bump the `version` field to the new version (e.g. `0.1.1`) in all 5
+1. Bump the `version` field to the new version (e.g. `0.1.1`) in all 6
    `packages/*/package.json`. Keep them identical.
 2. Commit on `master` (via PR): `chore(release): 0.1.1`.
 3. Tag and push:
@@ -38,7 +41,7 @@ Versions are **lockstep** — all 5 packages share one version.
    git push origin v0.1.1
    ```
    The `Release` workflow builds, rewrites `workspace:` → `^0.1.1`, and publishes
-   all 5 under the `next` dist-tag with provenance.
+   all 6 under the `next` dist-tag with provenance.
 4. To publish under a different dist-tag (e.g. `latest` for a stable release),
    run the workflow manually: **Actions → Release → Run workflow** and set the
    `tag` input.
