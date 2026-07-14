@@ -13,6 +13,13 @@ import {
   type Agent, type AnyStep, type IO, type LoopyDeps,
   type NoDuplicateTools, type ToolDepKeys,
 } from "@loopyjs/core";
+// NOTE (core 1.0): this package (and mcp-bridge.ts) consumes @loopyjs/core's
+// "./internal" subpath — a surface core explicitly marks "subject to change".
+// Safe today because core and claude-code ship lockstep at the same version and
+// the peer dep is `workspace:^` (→ ^0.2.x). Before core 1.0 freezes its public
+// API, decide the long-term contract: promote the consumed symbols to a stable
+// subpath, or formalize the version-lock. Deferred by decision (2026-07-14) —
+// not urgent while lockstep holds.
 import {
   parseStructured, rawChannel, stableStringify,
   type Driver, type RunnableNode, type RuntimeCtx, type ToolLike,
@@ -68,7 +75,7 @@ function delegationDriver(a: DelegateRt, opts: ClaudeDelegateOpts): Driver {
   const delegationTool: ToolLike = {
     name: `delegate:${a.name}`,
     "~depKeys": depKeys,
-    run: (async (input: unknown, tctx: { deps: Record<string, unknown> }): Promise<unknown> => {
+    run: async (input: unknown, tctx: { deps: Record<string, unknown> }): Promise<unknown> => {
       const bridge = await startToolBridge(a.tools, tctx.deps);
       try {
         const text = await backend.run({
@@ -83,7 +90,7 @@ function delegationDriver(a: DelegateRt, opts: ClaudeDelegateOpts): Driver {
       } finally {
         await bridge.close();
       }
-    }) as ToolLike["run"],
+    },
   };
 
   const run: RunnableNode = {
