@@ -7,3 +7,8 @@ export { agentNode } from "./runtime/drivers/agent.ts";
 export { runThread, type Driver, type RunnableNode } from "./runtime/scheduler.ts";
 export { rawChannel } from "./runtime/channels.ts";
 export { threadId } from "./runtime/events.ts";
+
+// Task(model B): @loopyjs/claude-code의 delegation driver/브리지가 소비하는 최소 표면.
+export { pickDeps, type RuntimeCtx, type ToolLike } from "./runtime/effects.ts";
+export { stableStringify } from "./runtime/events.ts";
+export { parseStructured, ParseError } from "./runtime/sap.ts";
