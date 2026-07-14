@@ -55,6 +55,14 @@ interface ActResult {
   readonly handoff: string | null;
 }
 
+/** agent→driver 전환의 단일 관문: authoring 객체가 자기 driver 팩토리(~driverFactory)를
+ *  들고 오면(예: @loopyjs/claude-code delegatedAgent) 그걸 존중하고, 아니면 agentDriver.
+ *  passTo 옵션이 필요한 team 경로는 이 관문을 쓰지 않는다(위임 agent는 team 비지원). */
+export function driverForAgent(a: RtAgent): Driver {
+  const f = (a as { "~driverFactory"?: () => Driver })["~driverFactory"];
+  return f ? f() : agentDriver(a);
+}
+
 export function agentDriver(agent: RtAgent, opts: { passToTargets?: readonly string[] } = {}): Driver {
   const passTo = opts.passToTargets ?? [];
   const maxSteps = agent.maxSteps ?? DEFAULT_MAX_STEPS;
@@ -110,7 +118,7 @@ export function agentDriver(agent: RtAgent, opts: { passToTargets?: readonly str
           // sub-agent-as-tool: 중첩 그래프. 같은 act 배치 내 재호출 구분자 @i
           try {
             const env = (await runGraph(
-              agentDriver(t as unknown as RtAgent), `${scope}/${call.name}@${i}`, k, call.args,
+              driverForAgent(t as unknown as RtAgent), `${scope}/${call.name}@${i}`, k, call.args,
             )) as { output: unknown };
             results.push({ role: "tool", toolCallId: call.id, content: stableStringify(env.output) });
           } catch (err) {
@@ -200,7 +208,7 @@ export function agentNode(agent: RtAgent): RunnableNode {
   return {
     reads: (s: StateSnapshot) => s, // 외부 바인딩의 reads가 이미 적용된 input이 run으로 옴
     run: async (input: unknown, _ctx: RuntimeCtx, k: KernelCtx, scope: string) => {
-      const env = (await runGraph(agentDriver(agent), scope, k, input)) as { output: unknown };
+      const env = (await runGraph(driverForAgent(agent), scope, k, input)) as { output: unknown };
       return env.output;
     },
   };

@@ -16,7 +16,7 @@
 
 import { runThread as _runThread } from "./runtime/scheduler.ts";
 import { workflowDriver } from "./runtime/drivers/workflow.ts";
-import { agentDriver, agentNode } from "./runtime/drivers/agent.ts";
+import { agentNode, driverForAgent } from "./runtime/drivers/agent.ts";
 import { teamDriver } from "./runtime/drivers/team.ts";
 import { memoryStore } from "./runtime/store.ts";
 import type { Checkpointer } from "./runtime/store.ts";
@@ -590,7 +590,7 @@ export function defineLoopy<
   const driverFor = (name: string): { driver: Driver; kind: RegEntry["kind"] } => {
     const e = registry.get(name);
     if (!e) throw new Error(`defineLoopy: unknown entry "${name}"`);
-    if (e.kind === "agent") return { driver: agentDriver(e.value as never), kind: e.kind };
+    if (e.kind === "agent") return { driver: driverForAgent(e.value as never), kind: e.kind };
     if (e.kind === "workflow") return { driver: workflowDriver(e.value as never, agentNode as never), kind: e.kind };
     return { driver: teamDriver(e.value as never), kind: e.kind };
   };

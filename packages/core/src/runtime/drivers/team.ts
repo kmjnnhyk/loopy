@@ -45,6 +45,15 @@ export function renderTeamView(name: string, state: StateSnapshot, domainKeys: r
 
 export function teamDriver(t: RtTeam): Driver {
   const cfg = t["~team"];
+  // fail fast at driver-build time — a router that never routes to the delegated
+  // agent would otherwise hide this indefinitely (agentNodeOf only runs per-visit).
+  for (const a of Object.values(cfg.agents)) {
+    if ((a as { "~driverFactory"?: unknown })["~driverFactory"] !== undefined) {
+      throw new Error(
+        `team: agent "${a.name}" has a custom driver factory — delegated agents cannot join teams (v1; passTo/handoff is a loopy-loop concept)`,
+      );
+    }
+  }
   const maxTurns = cfg.maxTurns ?? DEFAULT_MAX_TURNS;
   const domainKeys = Object.keys(t.state);
   const inputKeys = domainKeys.filter((k) => (t.state[k] as { "~input"?: boolean })["~input"] === true);
