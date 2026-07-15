@@ -1,6 +1,6 @@
 {
   "name": "@loopyjs/cli",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "description": "loopy CLI — loopy test [-u], loopy dev <module>",
   "license": "MIT",
