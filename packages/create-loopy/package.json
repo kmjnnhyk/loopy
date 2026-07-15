@@ -1,6 +1,6 @@
 {
   "name": "create-loopy",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "description": "Scaffold a ready-to-run loopy project",
   "license": "MIT",
